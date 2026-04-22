@@ -1,65 +1,133 @@
-import Image from "next/image";
+import styles from './page.module.css';
+import { Play } from 'lucide-react';
+
+const FEATURED_PLAYLISTS = [
+  { id: 1, title: 'Made For You', description: 'Personalized mix of your favorites', color: '#3d5afe' },
+  { id: 2, title: 'Daily Mix 1', description: 'Electronic, Synthwave and more', color: '#7c4dff' },
+  { id: 3, title: 'Release Radar', description: 'New music from artists you follow', color: '#ff4081' },
+  { id: 4, title: 'Discover Weekly', description: 'Your weekly mixtape of fresh music', color: '#00e5ff' },
+];
+
+const RECENTLY_PLAYED = [
+  { id: 101, title: 'Midnight City', artist: 'M83', albumArt: '/bg-1.jpg' },
+  { id: 102, title: 'Blinding Lights', artist: 'The Weeknd', albumArt: '/bg-2.jpg' },
+  { id: 103, title: 'Starboy', artist: 'The Weeknd', albumArt: '/bg-3.jpg' },
+  { id: 104, title: 'Stay', artist: 'The Kid LAROI', albumArt: '/bg-1.jpg' },
+  { id: 105, title: 'Heat Waves', artist: 'Glass Animals', albumArt: '/bg-2.jpg' },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className={styles.home}>
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <span className={styles.badge}>Featured Playlist</span>
+          <h1 className={styles.heroTitle}>Celestial Melodies</h1>
+          <p className={styles.heroDescription}>
+            Dive into a cosmic journey of ambient soundscapes and ethereal beats. 
+            Perfect for deep focus or late-night contemplation.
           </p>
+          <div className={styles.heroActions}>
+            <button className={styles.primaryButton}>
+              <Play size={20} fill="currentColor" />
+              <span>Listen Now</span>
+            </button>
+            <button className={styles.secondaryButton}>Save to Library</button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Good Morning</h2>
+        <div className={styles.grid}>
+          {FEATURED_PLAYLISTS.map((playlist) => (
+            <div key={playlist.id} className={styles.playlistCard}>
+              <div className={styles.cardInfo}>
+                <div 
+                  className={styles.cardGradient} 
+                  style={{ background: `linear-gradient(135deg, ${playlist.color}, rgba(0,0,0,0.5))` }}
+                ></div>
+                <h3 className={styles.cardTitle}>{playlist.title}</h3>
+              </div>
+              <button className={styles.cardPlayButton}>
+                <Play size={20} fill="black" />
+              </button>
+            </div>
+          ))}
         </div>
-      </main>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Based on your music taste</h2>
+          <button className={styles.seeAll}>See All</button>
+        </div>
+        <div className={styles.horizontalScroll}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className={styles.trackCard}>
+              <div className={styles.trackArtWrapper}>
+                <div className={`${styles.trackArtPlaceholder} ${styles.recommendationArt}`}>
+                  <div className={styles.trackPlayOverlay}>
+                    <Play size={32} fill="white" />
+                  </div>
+                </div>
+              </div>
+              <div className={styles.trackInfo}>
+                <h4 className={styles.trackName}>Taste Mix {i}</h4>
+                <p className={styles.trackArtist}>SonicStream Curated</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Because you like The Weeknd</h2>
+          <button className={styles.seeAll}>See All</button>
+        </div>
+        <div className={styles.horizontalScroll}>
+          {RECENTLY_PLAYED.map((track) => (
+            <div key={track.id + '-rec'} className={styles.trackCard}>
+              <div className={styles.trackArtWrapper}>
+                <div className={styles.trackArtPlaceholder}>
+                  <div className={styles.trackPlayOverlay}>
+                    <Play size={32} fill="white" />
+                  </div>
+                </div>
+              </div>
+              <div className={styles.trackInfo}>
+                <h4 className={styles.trackName}>{track.title}</h4>
+                <p className={styles.trackArtist}>{track.artist}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>Recently Played</h2>
+          <button className={styles.seeAll}>See All</button>
+        </div>
+        <div className={styles.horizontalScroll}>
+          {RECENTLY_PLAYED.map((track) => (
+            <div key={track.id} className={styles.trackCard}>
+              <div className={styles.trackArtWrapper}>
+                <div className={styles.trackArtPlaceholder}>
+                  <div className={styles.trackPlayOverlay}>
+                    <Play size={32} fill="white" />
+                  </div>
+                </div>
+              </div>
+              <div className={styles.trackInfo}>
+                <h4 className={styles.trackName}>{track.title}</h4>
+                <p className={styles.trackArtist}>{track.artist}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
