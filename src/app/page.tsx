@@ -40,10 +40,11 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     Promise.all([
-      fetch('http://localhost:4000/api/music/trending').then(r => r.json()),
+      fetch(`${API_BASE}/api/music/trending`).then(r => r.json()),
       ...LANGUAGE_CONFIG.map(l =>
-        fetch(`http://localhost:4000/api/music/language/${l.key}`).then(r => r.json())
+        fetch(`${API_BASE}/api/music/language/${l.key}`).then(r => r.json())
       ),
     ]).then(([trendData, ...langData]) => {
       setTrending(trendData.results || []);

@@ -117,6 +117,74 @@ app.get('/api/music/audiomack-embed', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────
+//  AGGREGATOR ROUTES (YouTube, Archive, RSS)
+// ─────────────────────────────────────────────
+
+import { getYouTubeVideoId, getYouTubeAudioStream } from './services/youtube.service';
+import * as ia from './services/archive.service';
+import { parseFeed, INDIAN_PODCASTS } from './services/rss.service';
+
+// YouTube Audio Stream Proxy Component
+// Takes iTunes metadata and returns a full native stream
+app.get('/api/music/stream', async (req, res) => {
+  const { title, artist } = req.query as { title: string; artist: string };
+  if (!title) return res.status(400).send('Missing title');
+  
+  try {
+    const query = `${title} ${artist || ''} official audio`;
+    const videoId = await getYouTubeVideoId(query);
+    if (!videoId) return res.status(404).send('YouTube stream not found');
+    
+    const stream = getYouTubeAudioStream(videoId);
+    res.setHeader('Content-Type', 'audio/mpeg');
+    stream.pipe(res);
+  } catch (err) {
+    console.error('Stream proxy error:', err);
+    res.status(500).send('Stream error');
+  }
+});
+
+// Internet Archive endpoints (Indian catalog)
+app.get('/api/archive/search', async (req, res) => {
+  try {
+    const { q, limit = 20 } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query required' });
+    const tracks = await ia.searchTracks(q as string, { limit: Number(limit) });
+    res.json({ tracks, total: tracks.length, source: 'internetarchive' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/archive/indian/:category', async (req, res) => {
+  try {
+    const tracks = await ia.getIndianMusic(
+      req.params.category,
+      Number(req.query.limit) || 20
+    );
+    res.json({ tracks, category: req.params.category });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Podcasts (RSS feed parser)
+app.get('/api/podcasts/feed', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'Feed URL required' });
+    const { show, episodes } = await parseFeed(url);
+    res.json({ show, episodes });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/podcasts/indian', (req, res) => {
+  res.json({ shows: INDIAN_PODCASTS });
+});
+
 // Protected Playlist Routes
 app.get('/api/playlists', authMiddleware, async (req: AuthRequest, res) => {
   if (!req.userId) return res.status(401).json({ message: 'Unauthorized' });

@@ -67,8 +67,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
     set({ audiomackUrl: null });
 
+    // Rewrite iTunes URL to our full length proxy
+    let streamUrl = track.url;
+    if (!track.source || track.source === 'itunes') {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      streamUrl = `${API_BASE}/api/music/stream?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist)}`;
+    }
+
     const newHowl = new Howl({
-      src: [track.url],
+      src: [streamUrl],
       html5: true, 
       volume: get().volume,
       onplay: () => set({ isPlaying: true }),
@@ -81,7 +88,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       onload: () => set({ duration: newHowl.duration() }),
     });
 
-    set({ currentTrack: track, howl: newHowl, isPlaying: true });
+    set({ currentTrack: {...track, url: streamUrl}, howl: newHowl, isPlaying: true });
     newHowl.play();
   },
 
