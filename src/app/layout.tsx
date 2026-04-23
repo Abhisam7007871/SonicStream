@@ -41,6 +41,7 @@ export default function RootLayout({
             </div>
           </main>
           <Player />
+          <AudiomackManager />
         </div>
       </body>
     </html>

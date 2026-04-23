@@ -46,6 +46,21 @@ app.get('/api/music/search', async (req, res) => {
   }
 });
 
+import { searchYouTube } from './services/youtube.service';
+
+// YouTube Direct Search
+app.get('/api/youtube/search', async (req, res) => {
+  const { q } = req.query as { q?: string };
+  const term = q || 'top hits 2024';
+  try {
+    const results = await searchYouTube(term, 30);
+    res.json({ query: term, total: results.length, results });
+  } catch (err: any) {
+    console.error('YouTube Search error:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Browse by language
 app.get('/api/music/language/:lang', async (req, res) => {
   const lang = req.params.lang.toLowerCase() as keyof typeof LANGUAGE_SEARCHES;
@@ -121,8 +136,9 @@ app.get('/api/music/audiomack-embed', async (req, res) => {
 //  AGGREGATOR ROUTES (YouTube, Archive, RSS)
 // ─────────────────────────────────────────────
 
-import { getYouTubeVideoId, getYouTubeAudioStream } from './services/youtube.service';
+import { searchYouTube, getInvidiousAudioUrl, getYouTubeVideoId } from './services/youtube.service';
 import * as ia from './services/archive.service';
+import { searchAllSources } from './services/freeMusic.service';
 import { parseFeed, INDIAN_PODCASTS } from './services/rss.service';
 
 // YouTube Audio Stream Proxy Component
@@ -136,14 +152,53 @@ app.get('/api/music/stream', async (req, res) => {
     const videoId = await getYouTubeVideoId(query);
     if (!videoId) return res.status(404).send('YouTube stream not found');
     
-    const stream = getYouTubeAudioStream(videoId);
-    res.setHeader('Content-Type', 'audio/mpeg');
-    stream.pipe(res);
+    const audioUrl = await getInvidiousAudioUrl(videoId);
+    res.redirect(audioUrl);
   } catch (err) {
     console.error('Stream proxy error:', err);
     res.status(500).send('Stream error');
   }
 });
+
+// YouTube Direct Stream Proxy (Piped for reliability)
+app.get('/api/youtube/stream', async (req, res) => {
+  const { id } = req.query as { id: string };
+  if (!id) return res.status(400).send('Missing video id');
+  
+  console.log(`[Stream] Request for video: ${id}`);
+  try {
+    const audioUrl = await getInvidiousAudioUrl(id);
+    console.log(`[Stream] Piping from: ${audioUrl.substring(0, 50)}...`);
+    
+    const response = await fetch(audioUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Invidious stream returned ${response.status}`);
+    }
+
+    // Set headers for audio streaming
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'audio/mpeg');
+    if (response.headers.has('content-length')) {
+      res.setHeader('Content-Length', response.headers.get('content-length')!);
+    }
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+
+    // Pipe the stream
+    if (response.body) {
+      (response.body as any).pipe(res);
+    } else {
+      throw new Error("No response body from Invidious");
+    }
+
+  } catch (err: any) {
+    console.error('[Stream] Error:', err.message);
+    res.status(500).send('Stream error: ' + err.message);
+  }
+});
+
 
 // Internet Archive endpoints (Indian catalog)
 app.get('/api/archive/search', async (req, res) => {
@@ -185,6 +240,18 @@ app.get('/api/podcasts/indian', (req, res) => {
   res.json({ shows: INDIAN_PODCASTS });
 });
 
+// Unified Free Music Search (ccMixter, FMA, Musopen, etc.)
+app.get('/api/music/free-search', async (req, res) => {
+  try {
+    const { q, limit = 20 } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query required' });
+    const results = await searchAllSources(q as string, Number(limit));
+    res.json({ results, total: results.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Protected Playlist Routes
 app.get('/api/playlists', authMiddleware, async (req: AuthRequest, res) => {
   if (!req.userId) return res.status(401).json({ message: 'Unauthorized' });
@@ -207,11 +274,12 @@ app.post('/api/playlists', authMiddleware, async (req: AuthRequest, res) => {
   res.status(201).json(playlist);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT as number, '127.0.0.1', () => {
+  console.log(`Server running on http://127.0.0.1:${PORT}`);
 });
 
 process.on('SIGINT', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+// Trigger restart

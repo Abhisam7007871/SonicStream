@@ -1,13 +1,13 @@
 import { create } from 'zustand';
-import { Howl } from 'howler';
 
 interface Track {
   id: string | number;
   title: string;
   artist: string;
-  albumArt: string;
+  albumArt?: string;
+  cover?: string;
   url: string;
-  source?: 'audiomack' | 'internal';
+  source?: 'audiomack' | 'internal' | 'itunes' | 'youtube' | 'internetarchive';
 }
 
 type AudioQuality = '48kbps' | '128kbps' | '256kbps' | '320kbps' | 'FLAC';
@@ -20,8 +20,9 @@ interface PlayerState {
   duration: number;
   quality: AudioQuality;
   queue: Track[];
-  howl: Howl | null;
   audiomackUrl: string | null;
+  isShuffle: boolean;
+  isRepeat: boolean;
 
   // Actions
   setCurrentTrack: (track: Track) => void;
@@ -34,100 +35,91 @@ interface PlayerState {
   playPrevious: () => void;
   updateProgress: () => void;
   setAudiomackUrl: (url: string | null) => void;
+  setDuration: (duration: number) => void;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
+  seekForward: () => void;
+  seekBackward: () => void;
+  increaseVolume: () => void;
+  decreaseVolume: () => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
-  currentTrack: {
-    id: '1',
-    title: 'Starlight Symphony',
-    artist: 'Nebula Dreams',
-    albumArt: '',
-    url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' // Mock URL
-  },
+  currentTrack: null,
   isPlaying: false,
   volume: 0.7,
   progress: 0,
   duration: 0,
   quality: '128kbps',
   queue: [],
-  howl: null,
   audiomackUrl: null,
+  isShuffle: false,
+  isRepeat: false,
 
-  setCurrentTrack: (track) => {
-    const { howl } = get();
-    if (howl) {
-      howl.stop();
-      howl.unload();
-    }
+  setCurrentTrack: (track: Track) => {
+    console.log('[Store] Setting track:', track.title, 'Source:', track.source);
+    const API_BASE = 'http://127.0.0.1:4000'; // Hardcoded for reliability
+    
+    // Normalize image and initial stream URL
+    const albumArt = track.albumArt || track.cover || '';
+    let streamUrl = track.url || (track as any).streamUrl || '';
 
-    if (track.source === 'audiomack') {
-      set({ currentTrack: track, audiomackUrl: track.url, isPlaying: true, howl: null });
-      return;
-    }
-
-    set({ audiomackUrl: null });
-
-    // Rewrite iTunes URL to our full length proxy
-    let streamUrl = track.url;
-    if (!track.source || track.source === 'itunes') {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-      streamUrl = `${API_BASE}/api/music/stream?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist)}`;
-    }
-
-    const newHowl = new Howl({
-      src: [streamUrl],
-      html5: true, 
-      volume: get().volume,
-      onplay: () => set({ isPlaying: true }),
-      onpause: () => set({ isPlaying: false }),
-      onstop: () => set({ isPlaying: false, progress: 0 }),
-      onend: () => {
-        set({ isPlaying: false, progress: 0 });
-        get().playNext();
-      },
-      onload: () => set({ duration: newHowl.duration() }),
+    // 1. Handle YouTube source
+    if (track.source === 'youtube') {
+      streamUrl = `https://www.youtube.com/watch?v=${track.id}`;
+      console.log('[Store] Using direct YouTube URL:', streamUrl);
+    } 
+    
+    // 2. Set state IMMEDIATELY to capture user interaction context
+    set({ 
+      currentTrack: { ...track, albumArt, url: streamUrl }, 
+      isPlaying: true, 
+      progress: 0,
+      audiomackUrl: track.source === 'audiomack' ? track.url : null
     });
-
-    set({ currentTrack: {...track, url: streamUrl}, howl: newHowl, isPlaying: true });
-    newHowl.play();
+    
+    // 3. Background resolution for iTunes/Generic tracks
+    if (!track.source || track.source === 'itunes') {
+      console.log('[Store] Resolving iTunes track in background...');
+      fetch(`${API_BASE}/api/youtube/search?q=${encodeURIComponent(track.title + ' ' + track.artist + ' audio')}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            const ytId = data.results[0].id;
+            const finalUrl = `https://www.youtube.com/watch?v=${ytId}`;
+            console.log('[Store] Background resolution success:', finalUrl);
+            set((state) => ({
+              currentTrack: state.currentTrack?.id === track.id 
+                ? { ...state.currentTrack, url: finalUrl, source: 'youtube' } 
+                : state.currentTrack
+            }));
+          }
+        })
+        .catch(err => console.error('[Store] Background resolution failed:', err));
+    }
   },
 
   setAudiomackUrl: (url) => set({ audiomackUrl: url }),
 
   togglePlay: () => {
-    const { howl, isPlaying } = get();
-    if (!howl) {
-      const { currentTrack } = get();
-      if (currentTrack) get().setCurrentTrack(currentTrack);
-      return;
-    }
-
-    if (isPlaying) {
-      howl.pause();
-    } else {
-      howl.play();
-    }
+    const { isPlaying } = get();
+    set({ isPlaying: !isPlaying });
   },
 
   setVolume: (volume) => {
-    const { howl } = get();
-    if (howl) howl.volume(volume);
     set({ volume });
   },
 
   setProgress: (progress) => {
-    const { howl, duration } = get();
-    if (howl && duration) {
-      howl.seek(progress);
-      set({ progress });
-    }
+    set({ progress });
+  },
+
+  setDuration: (duration) => {
+    set({ duration });
   },
 
   updateProgress: () => {
-    const { howl } = get();
-    if (howl && howl.playing()) {
-      set({ progress: howl.seek() });
-    }
+    // handled by ReactPlayer onProgress
   },
 
   setQuality: (quality) => set({ quality }),
@@ -135,20 +127,41 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   addToQueue: (track) => set((state) => ({ queue: [...state.queue, track] })),
 
   playNext: () => {
-    const { queue } = get();
+    const { queue, isShuffle } = get();
     if (queue.length > 0) {
-      const nextTrack = queue[0];
-      set((state) => ({ queue: state.queue.slice(1) }));
-      get().setCurrentTrack(nextTrack);
+      if (isShuffle) {
+        const randomIndex = Math.floor(Math.random() * queue.length);
+        const nextTrack = queue[randomIndex];
+        set((state) => ({ queue: state.queue.filter((_, i) => i !== randomIndex) }));
+        get().setCurrentTrack(nextTrack);
+      } else {
+        const nextTrack = queue[0];
+        set((state) => ({ queue: state.queue.slice(1) }));
+        get().setCurrentTrack(nextTrack);
+      }
     }
   },
 
   playPrevious: () => {
-    // Basic implementation: restart current track or handle history if implemented
-    const { howl } = get();
-    if (howl) {
-      howl.seek(0);
-      set({ progress: 0 });
-    }
+    set({ progress: 0 });
+  },
+
+  toggleShuffle: () => set((state) => ({ isShuffle: !state.isShuffle })),
+  toggleRepeat: () => set((state) => ({ isRepeat: !state.isRepeat })),
+  seekForward: () => {
+    const { progress, duration } = get();
+    set({ progress: Math.min(duration, progress + 10) });
+  },
+  seekBackward: () => {
+    const { progress } = get();
+    set({ progress: Math.max(0, progress - 10) });
+  },
+  increaseVolume: () => {
+    const { volume } = get();
+    set({ volume: Math.min(1, volume + 0.1) });
+  },
+  decreaseVolume: () => {
+    const { volume } = get();
+    set({ volume: Math.max(0, volume - 0.1) });
   },
 }));

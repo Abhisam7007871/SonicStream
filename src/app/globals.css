@@ -69,8 +69,8 @@ a {
 }
 
 .main-content {
-  flex-grow: 1;
-  height: calc(100vh - var(--player-height));
+  grid-area: main;
+  height: 100%;
   overflow-y: auto;
   position: relative;
   background: linear-gradient(to bottom, #111111, var(--bg-main));

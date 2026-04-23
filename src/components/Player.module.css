@@ -1,15 +1,12 @@
 .player {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: var(--player-height);
+  grid-area: player;
+  height: 100%;
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   align-items: center;
   padding: 0 20px;
   z-index: 1000;
-  border-top: none !important; /* overriden by glass class border if needed, but we want it subtle */
+  border-top: 1px solid var(--border-color);
 }
 
 .songInfo {
@@ -99,6 +96,21 @@
   color: var(--text-primary);
 }
 
+.iconButtonSmall {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.iconButtonSmall:hover {
+  color: var(--text-primary);
+}
+
 .progressBarWrapper {
   display: flex;
   align-items: center;
@@ -161,7 +173,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100px;
+  width: 140px;
 }
 
 .volumeBar {
@@ -196,4 +208,16 @@
 .qualityBadge:hover {
   border-color: var(--text-primary);
   color: var(--text-primary);
+}
+
+.loadingPulse {
+  animation: pulse 1.5s infinite;
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
 }

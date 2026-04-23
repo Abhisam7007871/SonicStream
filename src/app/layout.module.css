@@ -1,9 +1,12 @@
 .container {
   display: grid;
+  grid-template-areas: 
+    "sidebar main"
+    "player player";
   grid-template-columns: 240px 1fr;
   grid-template-rows: 1fr 90px;
   height: 100vh;
-  background-color: var(--bg-black);
+  background-color: var(--bg-main);
   overflow: hidden;
 }
 
@@ -15,6 +18,9 @@
 
 @media (max-width: 768px) {
   .container {
+    grid-template-areas: 
+      "main"
+      "player";
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 90px;
   }

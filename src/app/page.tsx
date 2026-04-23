@@ -116,7 +116,7 @@ export default function Home() {
         <div className={styles.horizontalScroll}>
           {(loading ? Array(8).fill(null) : trending).map((song, i) => (
             <div
-              key={song?.id ?? i}
+              key={`trending-${song?.id ?? i}`}
               className={styles.trackCard}
               onClick={() => song && handlePlay(song)}
             >
@@ -153,7 +153,7 @@ export default function Home() {
             <div className={styles.horizontalScroll}>
               {(loading ? Array(6).fill(null) : songs).map((song, i) => (
                 <div
-                  key={song?.id ?? i}
+                  key={`lang-${key}-${song?.id ?? i}`}
                   className={styles.trackCard}
                   onClick={() => song && handlePlay(song)}
                 >

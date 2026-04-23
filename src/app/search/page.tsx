@@ -6,7 +6,7 @@ import { useSearchStore } from '@/store/useSearchStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import { Play } from 'lucide-react';
 
-const TABS = ['Mainstream', 'Regional Classics', 'Podcasts'];
+const TABS = ['Global (YouTube)', 'Mainstream', 'Regional Classics', 'Open Library', 'Podcasts'];
 
 export default function SearchPage() {
   const { query } = useSearchStore();
@@ -25,8 +25,26 @@ export default function SearchPage() {
   useEffect(() => {
     setLoading(true);
     
-    if (activeTab === 'Mainstream') {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    if (activeTab === 'Global (YouTube)') {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
+      const endpoint = query.trim() 
+        ? `${API_BASE}/api/youtube/search?q=${encodeURIComponent(query)}`
+        : `${API_BASE}/api/youtube/search?q=top+music+hits+2024`;
+      
+      fetch(endpoint)
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then(data => { setResults(data.results || []); setLoading(false); })
+        .catch(err => { 
+          console.error('[Search] YouTube search failed:', err);
+          setResults([]);
+          setLoading(false);
+        });
+    }
+    else if (activeTab === 'Mainstream') {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
       const endpoint = query.trim() 
         ? `${API_BASE}/api/music/search?q=${encodeURIComponent(query)}`
         : `${API_BASE}/api/music/search?q=top+hits+2024`;
@@ -36,7 +54,7 @@ export default function SearchPage() {
         .then(data => { setResults(data.results || []); setLoading(false); });
     } 
     else if (activeTab === 'Regional Classics') {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
       const endpoint = query.trim()
         ? `${API_BASE}/api/archive/search?q=${encodeURIComponent(query)}`
         : `${API_BASE}/api/archive/indian/oldbollywood`;
@@ -45,9 +63,20 @@ export default function SearchPage() {
         .then(r => r.json())
         .then(data => { setResults(data.tracks || []); setLoading(false); });
     }
+    else if (activeTab === 'Open Library') {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
+      const endpoint = query.trim()
+        ? `${API_BASE}/api/music/free-search?q=${encodeURIComponent(query)}`
+        : `${API_BASE}/api/music/free-search?q=remix+instrumental`;
+        
+      fetch(endpoint)
+        .then(r => r.json())
+        .then(data => { setResults(data.results || []); setLoading(false); })
+        .catch(err => { console.error('[Search] Free search failed:', err); setResults([]); setLoading(false); });
+    }
     else if (activeTab === 'Podcasts') {
       // Load top Indian podcasts
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
       fetch(`${API_BASE}/api/podcasts/indian`)
         .then(r => r.json())
         .then(data => { setShows(data.shows || []); setLoading(false); });
@@ -58,7 +87,7 @@ export default function SearchPage() {
   const loadPodcastFeed = (feedUrl: string, showData: any) => {
     setLoading(true);
     setActiveShow(showData);
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
     fetch(`${API_BASE}/api/podcasts/feed?url=${encodeURIComponent(feedUrl)}`)
       .then(r => r.json())
       .then(data => {
@@ -111,6 +140,15 @@ export default function SearchPage() {
                   </div>
                   {song.source === 'internetarchive' && (
                     <span className={styles.songGenreTag} style={{ color: '#00e5ff' }}>Public Domain</span>
+                  )}
+                  {song.source === 'ccmixter' && (
+                    <span className={styles.songGenreTag} style={{ color: '#7c4dff' }}>ccMixter</span>
+                  )}
+                  {song.source === 'fma' && (
+                    <span className={styles.songGenreTag} style={{ color: '#ff4081' }}>FMA</span>
+                  )}
+                  {song.source === 'musopen' && (
+                    <span className={styles.songGenreTag} style={{ color: '#00bcd4' }}>Classical</span>
                   )}
                 </div>
               </div>
