@@ -188,3 +188,66 @@
   background: #2a2a2a;
   color: white;
 }
+
+/* Genre Pill Filters */
+.genrePills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.genrePill {
+  padding: 8px 20px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.genrePill:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+
+.genrePillActive {
+  font-weight: 800;
+  border-color: transparent;
+}
+
+/* Full song list for browse mode */
+.songsListFull {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.songGenreTag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.skeletonRow {
+  height: 56px;
+  background: linear-gradient(90deg, #1a1a1a 25%, #222 50%, #1a1a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}

@@ -7,6 +7,7 @@ interface Track {
   artist: string;
   albumArt: string;
   url: string;
+  source?: 'audiomack' | 'internal';
 }
 
 type AudioQuality = '48kbps' | '128kbps' | '256kbps' | '320kbps' | 'FLAC';
@@ -20,6 +21,7 @@ interface PlayerState {
   quality: AudioQuality;
   queue: Track[];
   howl: Howl | null;
+  audiomackUrl: string | null;
 
   // Actions
   setCurrentTrack: (track: Track) => void;
@@ -31,6 +33,7 @@ interface PlayerState {
   playNext: () => void;
   playPrevious: () => void;
   updateProgress: () => void;
+  setAudiomackUrl: (url: string | null) => void;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -48,6 +51,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   quality: '128kbps',
   queue: [],
   howl: null,
+  audiomackUrl: null,
 
   setCurrentTrack: (track) => {
     const { howl } = get();
@@ -56,9 +60,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       howl.unload();
     }
 
+    if (track.source === 'audiomack') {
+      set({ currentTrack: track, audiomackUrl: track.url, isPlaying: true, howl: null });
+      return;
+    }
+
+    set({ audiomackUrl: null });
+
     const newHowl = new Howl({
       src: [track.url],
-      html5: true, // Use HTML5 Audio for streaming
+      html5: true, 
       volume: get().volume,
       onplay: () => set({ isPlaying: true }),
       onpause: () => set({ isPlaying: false }),
@@ -73,6 +84,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({ currentTrack: track, howl: newHowl, isPlaying: true });
     newHowl.play();
   },
+
+  setAudiomackUrl: (url) => set({ audiomackUrl: url }),
 
   togglePlay: () => {
     const { howl, isPlaying } = get();

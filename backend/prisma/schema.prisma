@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  passwordHash  String
+  tier          String         @default("Free") // "Free", "Basic", "Premium"
+  stripeCustId  String?
+  playlists     Playlist[]
+  subscriptions Subscription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Track {
+  id          String          @id @default(uuid())
+  title       String
+  artist      String
+  album       String
+  url         String
+  duration    Int             // in seconds
+  quality     String          @default("128kbps")
+  playlists   PlaylistTrack[]
+  createdAt   DateTime        @default(now())
+}
+
+model Playlist {
+  id        String          @id @default(uuid())
+  name      String
+  isPublic  Boolean         @default(false)
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  tracks    PlaylistTrack[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model PlaylistTrack {
+  id         String   @id @default(uuid())
+  playlistId String
+  trackId    String
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
+  track      Track    @relation(fields: [trackId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([playlistId, trackId])
+}
+
+model Subscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  status    String   // "active", "canceled", "incomplete"
+  plan      String   // "Free", "Basic", "Premium"
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

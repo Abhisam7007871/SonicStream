@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
+import styles from './layout.module.css';
 import Sidebar from "@/components/Sidebar";
 import Player from "@/components/Player";
 import Navbar from "@/components/Navbar";
+import AuthOverlay from "@/components/AuthOverlay";
+import AudiomackManager from "@/components/AudiomackManager";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -16,8 +19,8 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "SonicStream | Premium Music Experience",
-  description: "Cross-platform high-fidelity music and podcast streaming.",
+  title: "SonicStream | Experience Pure Audio",
+  description: "High-fidelity music streaming for true audiophiles.",
 };
 
 export default function RootLayout({
@@ -28,7 +31,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable}`}>
-        <div className="app-container">
+        {/* <AuthOverlay /> */}
+        <div className={styles.container}>
           <Sidebar />
           <main className="main-content">
             <Navbar />
