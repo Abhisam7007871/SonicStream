@@ -4,69 +4,84 @@
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 32px;
   z-index: 1000;
   border-top: 1px solid var(--border-color);
+  background: var(--glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
 
 .songInfo {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .albumArt {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  background: var(--bg-surface-elevated);
+  transition: var(--transition-smooth);
+}
+
+.albumArt:hover {
+  transform: scale(1.05);
 }
 
 .placeholderArt {
   width: 100%;
   height: 100%;
-  background: var(--bg-surface-elevated);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-secondary);
+  color: var(--text-muted);
+  background: linear-gradient(135deg, var(--bg-surface-elevated), var(--bg-main));
 }
 
 .trackDetails {
   display: flex;
   flex-direction: column;
+  max-width: 200px;
 }
 
 .trackName {
-  font-size: 0.95rem;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .artistName {
-  font-size: 0.75rem;
+  font-size: 13px;
   color: var(--text-secondary);
   font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .controls {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .controlButtons {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 32px;
 }
 
 .playButton {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: white;
   display: flex;
@@ -74,11 +89,13 @@
   justify-content: center;
   border: none;
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: var(--transition-smooth);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
 }
 
 .playButton:hover {
   transform: scale(1.1);
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
 }
 
 .iconButton {
@@ -86,138 +103,107 @@
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: var(--transition-smooth);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
 }
 
 .iconButton:hover {
   color: var(--text-primary);
-}
-
-.iconButtonSmall {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-}
-
-.iconButtonSmall:hover {
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .progressBarWrapper {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  max-width: 500px;
+  max-width: 600px;
 }
 
 .timeLabel {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  min-width: 32px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: monospace;
+  min-width: 40px;
 }
 
 .progressBar {
   flex-grow: 1;
-  height: 4px;
+  height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  border-radius: 10px;
   position: relative;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
-  background: var(--text-primary);
-  border-radius: 2px;
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+  border-radius: 10px;
   position: relative;
-}
-
-.player:hover .progressFill {
-  background: var(--accent-primary);
-}
-
-.progressKnob {
-  width: 12px;
-  height: 12px;
-  background: white;
-  border-radius: 50%;
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translateY(-50%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  display: none;
-}
-
-.progressBar:hover .progressKnob {
-  display: block;
+  transition: width 0.1s linear;
 }
 
 .extraControls {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 20px;
 }
 
 .volumeControl {
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: 140px;
+  gap: 12px;
+  width: 160px;
 }
 
 .volumeBar {
   flex-grow: 1;
-  height: 4px;
+  height: 5px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
 .volumeFill {
   height: 100%;
   background: var(--text-secondary);
-  border-radius: 2px;
+  border-radius: 10px;
+  transition: width 0.1s ease;
 }
 
 .volumeControl:hover .volumeFill {
   background: var(--accent-primary);
 }
 
-.qualityBadge {
-  background: transparent;
-  border: 1px solid var(--text-secondary);
-  color: var(--text-secondary);
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 2px 4px;
-  border-radius: 4px;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.qualityBadge:hover {
-  border-color: var(--text-primary);
-  color: var(--text-primary);
-}
-
 .loadingPulse {
-  animation: pulse 1.5s infinite;
+  animation: pulse 2s infinite;
   color: var(--accent-primary);
   font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-left: 8px;
 }
 
 @keyframes pulse {
-  0% { opacity: 0.4; }
+  0% { opacity: 0.5; }
   50% { opacity: 1; }
-  100% { opacity: 0.4; }
+  100% { opacity: 0.5; }
+}
+
+@media (max-width: 768px) {
+  .player {
+    grid-template-columns: 1fr auto;
+    padding: 0 16px;
+  }
+  .extraControls, .progressBarWrapper {
+    display: none;
+  }
 }

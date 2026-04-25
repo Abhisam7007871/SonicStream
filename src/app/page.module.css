@@ -1,173 +1,200 @@
 .home {
   display: flex;
   flex-direction: column;
-  gap: 48px;
+  gap: 64px;
+  animation: fadeIn 0.8s ease-out;
 }
 
+/* Hero Section */
 .hero {
   position: relative;
-  height: 340px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(61, 90, 254, 0.4), rgba(124, 77, 255, 0.4)), url('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=2070&auto=format&fit=crop') center/cover;
-  display: flex;
-  align-items: flex-end;
-  padding: 40px;
+  min-height: 480px;
+  border-radius: 32px;
   overflow: hidden;
+  padding: 80px;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.4)), url('/hero.png');
+  background-size: cover;
+  background-position: center;
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-premium);
 }
 
 .heroContent {
-  position: relative;
-  z-index: 1;
-  max-width: 600px;
+  max-width: 640px;
+  z-index: 2;
 }
 
 .badge {
-  font-size: 0.75rem;
-  font-weight: 800;
+  display: inline-flex;
+  padding: 8px 20px;
+  border-radius: 100px;
+  background: rgba(99, 102, 241, 0.15);
+  backdrop-filter: blur(12px);
+  font-size: 14px;
+  font-weight: 700;
+  color: #818cf8;
+  margin-bottom: 24px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--accent-primary);
-  background: rgba(255, 255, 255, 0.1);
-  padding: 4px 12px;
-  border-radius: 20px;
-  margin-bottom: 16px;
-  display: inline-block;
 }
 
 .heroTitle {
-  font-size: 3.5rem;
-  font-family: var(--font-outfit);
+  font-size: 72px;
   font-weight: 900;
-  line-height: 1.1;
-  margin-bottom: 12px;
-  letter-spacing: -2px;
+  line-height: 1;
+  margin-bottom: 24px;
+  letter-spacing: -3px;
+  background: linear-gradient(to right, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .heroDescription {
-  font-size: 1rem;
+  font-size: 20px;
   color: var(--text-secondary);
+  margin-bottom: 40px;
   line-height: 1.6;
-  margin-bottom: 24px;
 }
 
 .heroActions {
   display: flex;
-  gap: 16px;
+  gap: 20px;
 }
 
 .primaryButton {
-  background: var(--text-primary);
-  color: var(--bg-main);
-  border: none;
-  padding: 12px 32px;
-  border-radius: 30px;
-  font-weight: 700;
+  padding: 18px 40px;
+  border-radius: 16px;
+  background: var(--accent-primary);
+  color: white;
+  font-weight: 800;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  border: none;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: var(--transition-smooth);
 }
 
 .primaryButton:hover {
-  transform: scale(1.05);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(99, 102, 241, 0.4);
 }
 
 .secondaryButton {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 12px 32px;
-  border-radius: 30px;
+  padding: 18px 40px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  color: white;
   font-weight: 700;
+  border: 1px solid var(--glass-border);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition-smooth);
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .secondaryButton:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* Section Styling */
 .section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 32px;
 }
 
 .sectionHeader {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
 }
 
 .sectionTitle {
-  font-size: 1.5rem;
+  font-size: 32px;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  letter-spacing: -1px;
 }
 
 .seeAll {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 15px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 8px 20px;
+  border-radius: 100px;
+  border: 1px solid var(--glass-border);
   cursor: pointer;
+  transition: var(--transition-smooth);
 }
 
 .seeAll:hover {
-  text-decoration: underline;
+  color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.08);
 }
 
+/* Grid Layouts */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .playlistCard {
   position: relative;
-  height: 80px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  height: 96px;
+  border-radius: 16px;
+  background: var(--bg-surface-elevated);
   display: flex;
   align-items: center;
   overflow: hidden;
-  transition: background 0.3s ease;
   cursor: pointer;
+  transition: var(--transition-smooth);
+  border: 1px solid transparent;
 }
 
 .playlistCard:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-surface);
+  border-color: var(--glass-border);
+  transform: translateX(12px);
 }
 
 .cardGradient {
-  width: 80px;
-  height: 80px;
+  width: 96px;
+  height: 96px;
   flex-shrink: 0;
 }
 
 .cardTitle {
-  font-size: 0.95rem;
+  padding-left: 20px;
+  font-size: 18px;
   font-weight: 700;
-  padding: 0 16px;
 }
 
 .cardPlayButton {
   position: absolute;
-  right: 16px;
-  width: 48px;
-  height: 48px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--accent-primary);
-  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
   opacity: 0;
-  transform: translateY(10px);
-  transition: all 0.3s ease;
+  transform: translateY(15px);
+  transition: var(--transition-smooth);
+  border: none;
+  box-shadow: var(--shadow-premium);
 }
 
 .playlistCard:hover .cardPlayButton {
@@ -175,139 +202,110 @@
   transform: translateY(0);
 }
 
+/* Horizontal Scroll */
 .horizontalScroll {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 200px;
-  gap: 24px;
+  display: flex;
+  gap: 28px;
   overflow-x: auto;
-  padding-bottom: 12px;
+  padding: 10px 4px 24px;
+  scroll-snap-type: x mandatory;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-/* Hide scrollbar for horizontal scroll if desired */
 .horizontalScroll::-webkit-scrollbar {
   display: none;
 }
 
 .trackCard {
-  background: #18181b;
-  padding: 16px;
-  border-radius: 12px;
-  transition: background 0.3s ease;
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  padding: 20px;
+  border-radius: 24px;
   cursor: pointer;
+  transition: var(--transition-smooth);
+  border: 1px solid transparent;
+  scroll-snap-align: start;
 }
 
 .trackCard:hover {
-  background: #27272a;
+  background: var(--bg-surface-elevated);
+  border-color: var(--glass-border);
+  transform: translateY(-12px);
 }
 
 .trackArtWrapper {
+  position: relative;
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 8px;
+  border-radius: 20px;
   overflow: hidden;
-  margin-bottom: 16px;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
-}
-
-.trackArtPlaceholder {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(45deg, #1e1e1e, #333);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+  margin-bottom: 20px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
 }
 
 .trackArtImg {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
-  position: relative;
+  transition: var(--transition-smooth);
 }
 
-.recommendationArt {
-  background: linear-gradient(135deg, var(--accent-secondary), #000);
+.trackCard:hover .trackArtImg {
+  transform: scale(1.15);
 }
 
 .trackPlayOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0,0,0,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: var(--transition-smooth);
+  backdrop-filter: blur(4px);
 }
 
 .trackCard:hover .trackPlayOverlay {
   opacity: 1;
 }
 
+.trackArtPlaceholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, var(--bg-surface-elevated), var(--bg-main));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trackInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .trackName {
-  font-size: 0.9rem;
+  font-size: 17px;
   font-weight: 700;
-  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text-primary);
 }
 
 .trackArtist {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.genreTag {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  font-size: 0.65rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 3px 8px;
-  border-radius: 4px;
-  color: white;
-}
-
-.songDurationBadge {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 3px 8px;
-  border-radius: 4px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.cardDesc {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  padding: 0 16px;
-}
-
-.cardInfo {
-  display: flex;
-  align-items: center;
-  flex: 1;
-  overflow: hidden;
+  font-size: 15px;
+  color: var(--text-muted);
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #282828 25%, #333 50%, #282828 75%);
+  background: linear-gradient(90deg, #18181b 25%, #27272a 50%, #18181b 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
-  border-radius: 4px;
-  color: transparent;
-  display: inline-block;
-  width: 100%;
+  border-radius: 12px;
 }
 
 @keyframes shimmer {
@@ -315,20 +313,12 @@
   100% { background-position: -200% 0; }
 }
 
-.secondaryButton {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 12px 24px;
-  border-radius: 30px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.trackInfo {
-  padding-top: 4px;
+@media (max-width: 768px) {
+  .hero {
+    padding: 40px;
+    min-height: 400px;
+  }
+  .heroTitle {
+    font-size: 48px;
+  }
 }

@@ -7,7 +7,7 @@ export default function Sidebar() {
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
         <Music2 className={styles.logoIcon} size={32} />
-        <span className={styles.logoText}>SonicStream</span>
+        <span className={styles.logoText}>GaMaPa</span>
       </div>
 
       <nav className={styles.nav}>

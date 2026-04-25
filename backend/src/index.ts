@@ -6,6 +6,7 @@ import authRoutes from './routes/auth.routes';
 import { authMiddleware, AuthRequest } from './middleware/auth.middleware';
 import { AudiomackService } from './services/audiomack.service';
 import { Readable } from 'stream';
+import fetch from 'node-fetch';
 
 dotenv.config();
 
@@ -13,7 +14,13 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors()); // Temporarily relax CORS for verification
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Range', 'Accept-Ranges'],
+  exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Type'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Log all requests
@@ -172,53 +179,54 @@ app.get('/api/youtube/stream', async (req, res) => {
 
     if (!audioUrl) {
       console.error(`[Stream] Could not resolve audio URL for ${id}`);
-      return res.status(503).send('Audio extraction failed for this video. Try another track.');
+      return res.status(503).send('Audio extraction failed. Try another track.');
     }
 
-    console.log(`[Stream] Resolved URL: ${audioUrl.substring(0, 80)}...`);
-
-    // Forward Range header so the browser can seek
-    const upstreamHeaders: Record<string, string> = {
+    // Forward Range header
+    const upstreamHeaders: any = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
     };
     if (req.headers.range) {
-      upstreamHeaders['Range'] = req.headers.range;
+      upstreamHeaders['range'] = req.headers.range;
     }
 
-    const response = await fetch(audioUrl, { 
-      method: req.method,
-      headers: upstreamHeaders 
+    console.log(`[Stream] Proxying from CDN: ${audioUrl.substring(0, 60)}...`);
+
+    const https = require('https');
+    const http = require('http');
+    const client = audioUrl.startsWith('https') ? https : http;
+
+    const proxyReq = client.get(audioUrl, { headers: upstreamHeaders }, (proxyRes: any) => {
+      // Forward status and essential headers only
+      res.status(proxyRes.statusCode);
+      
+      const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
+      headersToForward.forEach(h => {
+        if (proxyRes.headers[h]) res.setHeader(h, proxyRes.headers[h]);
+      });
+      
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      let bytesSent = 0;
+      proxyRes.on('data', (chunk: any) => {
+        bytesSent += chunk.length;
+      });
+
+      proxyRes.on('end', () => {
+        console.log(`[Stream] ✓ Finished. Sent ${bytesSent} bytes for ${id}`);
+      });
+
+      proxyRes.pipe(res);
     });
 
-    if (!response.ok && response.status !== 206) {
-      throw new Error(`Upstream CDN returned ${response.status}`);
-    }
+    proxyReq.on('error', (err: any) => {
+      console.error('[Stream] Proxy Request Error:', err.message);
+      if (!res.headersSent) res.status(500).send('Stream error');
+    });
 
-    // Mirror relevant headers
-    res.status(response.status);
-    const ct = response.headers.get('content-type');
-    if (ct) res.setHeader('Content-Type', ct);
-    const cl = response.headers.get('content-length');
-    if (cl) res.setHeader('Content-Length', cl);
-    const cr = response.headers.get('content-range');
-    if (cr) res.setHeader('Content-Range', cr);
-    res.setHeader('Accept-Ranges', 'bytes');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    if (req.method === 'HEAD') {
-      return res.end();
-    }
-
-    if (response.body) {
-      // Node.js global fetch returns a Web Stream. We convert it to a Node stream for Express.
-      Readable.fromWeb(response.body as any).pipe(res);
-    } else {
-      throw new Error('No response body from CDN');
-    }
   } catch (err: any) {
     console.error('[Stream] Error:', err.message);
-    if (!res.headersSent) res.status(500).send('Stream error: ' + err.message);
+    if (!res.headersSent) res.status(500).send('Stream error');
   }
 });
 

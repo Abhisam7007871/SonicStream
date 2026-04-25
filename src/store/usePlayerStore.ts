@@ -44,7 +44,7 @@ interface PlayerState {
   decreaseVolume: () => void;
 }
 
-const API_BASE = 'http://127.0.0.1:4000';
+const API_BASE = 'http://localhost:4000';
 
 /**
  * Resolves a track to a playable direct-audio URL.
@@ -61,7 +61,9 @@ function resolveStreamUrl(track: Track): string {
     const videoId = String(track.id).startsWith('http')
       ? new URLSearchParams(new URL(String(track.id)).search).get('v') || String(track.id)
       : String(track.id);
-    return `${API_BASE}/api/youtube/stream?id=${videoId}`;
+    
+    // Add a dummy extension to help ReactPlayer/Browsers detect the mime type
+    return `${API_BASE}/api/youtube/stream?id=${videoId}&ext=.webm`;
   }
 
   // For iTunes the previewUrl is a 30-sec Apple-CDN .m4a — use it directly.
@@ -86,16 +88,21 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const streamUrl = resolveStreamUrl(track);
 
     console.log(
-      `[Store] ▶ ${track.title} | source: ${track.source} | stream: ${streamUrl.substring(0, 80)}`
+      `[Store] ▶ ${track.title} | source: ${track.source} | stream: ${streamUrl}`
     );
 
     set({
       currentTrack: { ...track, albumArt, url: streamUrl },
-      isPlaying: !!streamUrl,
+      isPlaying: false, // Start false and flip to true after a micro-task
       progress: 0,
       duration: 0,
       audiomackUrl: track.source === 'audiomack' ? track.url : null,
     });
+
+    // Short delay to ensure ReactPlayer receives the URL before playing
+    setTimeout(() => {
+      set({ isPlaying: true });
+    }, 300);
   },
 
   setAudiomackUrl: (url) => set({ audiomackUrl: url }),

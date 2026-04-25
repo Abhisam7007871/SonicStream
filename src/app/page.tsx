@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import styles from './page.module.css';
-import { Play, Flame, Music2 } from 'lucide-react';
+import { Play, Flame, Music2, Sparkles, TrendingUp, Globe, Heart } from 'lucide-react';
 import { usePlayerStore } from '@/store/usePlayerStore';
 
 interface Song {
@@ -18,19 +18,19 @@ interface Song {
 }
 
 const LANGUAGE_CONFIG = [
-  { key: 'hindi',   label: '🇮🇳 Hindi',   color: '#ff9800' },
-  { key: 'punjabi', label: '🎵 Punjabi',  color: '#e040fb' },
-  { key: 'korean',  label: '🇰🇷 Korean',  color: '#00e5ff' },
-  { key: 'english', label: '🌍 English',  color: '#3d5afe' },
+  { key: 'hindi',   label: 'Hindi Hits',   icon: '🇮🇳', color: '#ff9800' },
+  { key: 'punjabi', label: 'Punjabi Beats', icon: '🎵', color: '#e040fb' },
+  { key: 'korean',  label: 'K-Pop Central', icon: '🇰🇷', color: '#00e5ff' },
+  { key: 'english', label: 'Global English', icon: '🌍', color: '#6366f1' },
 ];
 
-const FEATURED_PLAYLISTS = [
-  { id: 1, title: 'Made For You',     color: '#3d5afe' },
-  { id: 2, title: 'Daily Mix 1',      color: '#7c4dff' },
-  { id: 3, title: 'Release Radar',    color: '#ff4081' },
-  { id: 4, title: 'Discover Weekly',  color: '#00e5ff' },
-  { id: 5, title: 'Chill Vibes',      color: '#00bcd4' },
-  { id: 6, title: 'Late Night Drive', color: '#e91e63' },
+const QUICK_MIXES = [
+  { id: 1, title: 'Morning Energy', color: '#6366f1' },
+  { id: 2, title: 'Deep Focus',     color: '#a855f7' },
+  { id: 3, title: 'Chill Vibes',    color: '#ec4899' },
+  { id: 4, title: 'Workout Mix',    color: '#f43f5e' },
+  { id: 5, title: 'Late Night',     color: '#8b5cf6' },
+  { id: 6, title: 'Release Radar',  color: '#06b6d4' },
 ];
 
 export default function Home() {
@@ -42,9 +42,9 @@ export default function Home() {
   useEffect(() => {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     Promise.all([
-      fetch(`${API_BASE}/api/music/trending`).then(r => r.json()),
+      fetch(`${API_BASE}/api/music/trending`).then(r => r.json()).catch(() => ({ results: [] })),
       ...LANGUAGE_CONFIG.map(l =>
-        fetch(`${API_BASE}/api/music/language/${l.key}`).then(r => r.json())
+        fetch(`${API_BASE}/api/music/language/${l.key}`).then(r => r.json()).catch(() => ({ results: [] }))
       ),
     ]).then(([trendData, ...langData]) => {
       setTrending(trendData.results || []);
@@ -63,55 +63,61 @@ export default function Home() {
 
   return (
     <div className={styles.home}>
-      {/* Hero */}
+      {/* Hero Section */}
       <section className={styles.hero}>
         <div className={styles.heroContent}>
-          <span className={styles.badge}>🔥 Now Streaming</span>
-          <h1 className={styles.heroTitle}>Music for Everyone</h1>
+          <span className={styles.badge}>
+            <Sparkles size={14} style={{ marginRight: '8px' }} />
+            Premium Streaming
+          </span>
+          <h1 className={styles.heroTitle}>Discover Your <br />Perfect Sound</h1>
           <p className={styles.heroDescription}>
-            Real songs in Hindi 🇮🇳, Punjabi 🎵, Korean 🇰🇷 & English 🌍 — free, with album art & previews.
+            Immerse yourself in high-fidelity audio from around the world. 
+            Official tracks, curated playlists, and a seamless listening experience.
           </p>
           <div className={styles.heroActions}>
             <button
               className={styles.primaryButton}
               onClick={() => trending[0] && handlePlay(trending[0])}
             >
-              <Play size={20} fill="currentColor" />
-              <span>Play Trending</span>
+              <Play size={24} fill="currentColor" />
+              <span>Listen Now</span>
             </button>
             <button className={styles.secondaryButton}>
-              <Music2 size={16} /> 4 Languages
+              <Globe size={20} />
+              <span>Browse All</span>
             </button>
           </div>
         </div>
       </section>
 
-      {/* Quick Access */}
+      {/* Quick Access Grid */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Good Morning 👋</h2>
+        <h2 className={styles.sectionTitle}>Welcome Back</h2>
         <div className={styles.grid}>
-          {FEATURED_PLAYLISTS.map((playlist) => (
-            <div key={playlist.id} className={styles.playlistCard}>
-              <div className={styles.cardInfo}>
-                <div
-                  className={styles.cardGradient}
-                  style={{ background: `linear-gradient(135deg, ${playlist.color}, rgba(0,0,0,0.5))` }}
-                />
-                <h3 className={styles.cardTitle}>{playlist.title}</h3>
-              </div>
+          {QUICK_MIXES.map((mix) => (
+            <div key={mix.id} className={styles.playlistCard}>
+              <div
+                className={styles.cardGradient}
+                style={{ background: `linear-gradient(135deg, ${mix.color}, #0a0a0c)` }}
+              />
+              <h3 className={styles.cardTitle}>{mix.title}</h3>
               <button className={styles.cardPlayButton}>
-                <Play size={20} fill="black" />
+                <Play size={24} fill="black" />
               </button>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Trending */}
+      {/* Trending Tracks */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}><Flame size={20} /> Trending Across Languages</h2>
-          <button className={styles.seeAll}>See All</button>
+          <h2 className={styles.sectionTitle}>
+            <TrendingUp size={28} className="text-accent-primary" />
+            Trending Worldwide
+          </h2>
+          <button className={styles.seeAll}>Explore All</button>
         </div>
         <div className={styles.horizontalScroll}>
           {(loading ? Array(8).fill(null) : trending).map((song, i) => (
@@ -124,30 +130,36 @@ export default function Home() {
                 {song?.albumArt ? (
                   <>
                     <img src={song.albumArt} alt={song.title} className={styles.trackArtImg} />
-                    <div className={styles.trackPlayOverlay}><Play size={28} fill="white" /></div>
+                    <div className={styles.trackPlayOverlay}>
+                      <Play size={40} fill="white" />
+                    </div>
                   </>
                 ) : (
-                  <div className={styles.trackArtPlaceholder}>
-                    <div className={styles.trackPlayOverlay}><Play size={28} fill="white" /></div>
+                  <div className={loading ? styles.skeleton : styles.trackArtPlaceholder}>
+                    <div className={styles.trackPlayOverlay}>
+                      <Play size={40} fill="white" />
+                    </div>
                   </div>
                 )}
               </div>
               <div className={styles.trackInfo}>
                 <h4 className={styles.trackName}>{song?.title ?? '—'}</h4>
-                <p className={styles.trackArtist}>{song?.artist ?? ''}</p>
+                <p className={styles.trackArtist}>{song?.artist ?? 'Various Artists'}</p>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Language Rows */}
-      {LANGUAGE_CONFIG.map(({ key, label, color }) => {
+      {/* Language Specific Rows */}
+      {LANGUAGE_CONFIG.map(({ key, label, color, icon }) => {
         const songs = languageSongs[key] || [];
         return (
           <section key={key} className={styles.section}>
             <div className={styles.sectionHeader}>
-              <h2 className={styles.sectionTitle} style={{ color }}>{label}</h2>
+              <h2 className={styles.sectionTitle}>
+                <span style={{ fontSize: '24px' }}>{icon}</span> {label}
+              </h2>
               <button className={styles.seeAll}>See All</button>
             </div>
             <div className={styles.horizontalScroll}>
@@ -161,20 +173,24 @@ export default function Home() {
                     {song?.albumArt ? (
                       <>
                         <img src={song.albumArt} alt={song.title} className={styles.trackArtImg} />
-                        <div className={styles.trackPlayOverlay}><Play size={28} fill="white" /></div>
+                        <div className={styles.trackPlayOverlay}>
+                          <Play size={40} fill="white" />
+                        </div>
                       </>
                     ) : (
                       <div
-                        className={styles.trackArtPlaceholder}
-                        style={{ background: `linear-gradient(135deg, ${color}55, #0a0a0f)` }}
+                        className={loading ? styles.skeleton : styles.trackArtPlaceholder}
+                        style={{ background: `linear-gradient(135deg, ${color}33, #0a0a0f)` }}
                       >
-                        <div className={styles.trackPlayOverlay}><Play size={28} fill="white" /></div>
+                        <div className={styles.trackPlayOverlay}>
+                          <Play size={40} fill="white" />
+                        </div>
                       </div>
                     )}
                   </div>
                   <div className={styles.trackInfo}>
                     <h4 className={styles.trackName}>{song?.title ?? '—'}</h4>
-                    <p className={styles.trackArtist}>{song?.artist ?? ''}</p>
+                    <p className={styles.trackArtist}>{song?.artist ?? 'Unknown Artist'}</p>
                   </div>
                 </div>
               ))}
@@ -185,3 +201,4 @@ export default function Home() {
     </div>
   );
 }
+
