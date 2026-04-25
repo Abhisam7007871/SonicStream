@@ -31,6 +31,7 @@ interface PlayerState {
   setProgress: (progress: number) => void;
   setQuality: (quality: AudioQuality) => void;
   addToQueue: (track: Track) => void;
+  setQueue: (tracks: Track[]) => void;
   playNext: () => void;
   playPrevious: () => void;
   updateProgress: () => void;
@@ -87,13 +88,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const albumArt = track.albumArt || track.cover || '';
     const streamUrl = resolveStreamUrl(track);
 
-    console.log(
-      `[Store] ▶ ${track.title} | source: ${track.source} | stream: ${streamUrl}`
-    );
+    console.log(`[PlayerStore] setCurrentTrack:`, {
+      title: track.title,
+      id: track.id,
+      source: track.source,
+      resolvedUrl: streamUrl
+    });
 
     set({
       currentTrack: { ...track, albumArt, url: streamUrl },
-      isPlaying: false, // Start false and flip to true after a micro-task
+      isPlaying: false, 
       progress: 0,
       duration: 0,
       audiomackUrl: track.source === 'audiomack' ? track.url : null,
@@ -119,25 +123,49 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   updateProgress: () => { /* handled by ReactPlayer onProgress */ },
   setQuality: (quality) => set({ quality }),
   addToQueue: (track) => set((s) => ({ queue: [...s.queue, track] })),
+  setQueue: (tracks) => set({ queue: tracks }),
 
   playNext: () => {
-    const { queue, isShuffle } = get();
+    const { queue, currentTrack, isShuffle, isRepeat } = get();
     if (queue.length === 0) return;
-    if (isShuffle) {
-      const idx = Math.floor(Math.random() * queue.length);
-      const next = queue[idx];
-      set((s) => ({ queue: s.queue.filter((_, i) => i !== idx) }));
-      get().setCurrentTrack(next);
-    } else {
-      const [next, ...rest] = queue;
-      set({ queue: rest });
-      get().setCurrentTrack(next);
+
+    let nextIndex = 0;
+    if (currentTrack) {
+      const currentIndex = queue.findIndex(t => t.id === currentTrack.id);
+      if (isShuffle) {
+        nextIndex = Math.floor(Math.random() * queue.length);
+      } else {
+        nextIndex = (currentIndex + 1) % queue.length;
+      }
+    }
+
+    const nextTrack = queue[nextIndex];
+    if (nextTrack) {
+      get().setCurrentTrack(nextTrack);
     }
   },
 
   playPrevious: () => {
-    // Restart current track from beginning
-    set({ progress: 0 });
+    const { queue, currentTrack, progress } = get();
+    
+    // If progress is > 3s, just restart the song
+    if (progress > 3) {
+      set({ progress: 0 });
+      return;
+    }
+
+    if (queue.length === 0) return;
+
+    let prevIndex = 0;
+    if (currentTrack) {
+      const currentIndex = queue.findIndex(t => t.id === currentTrack.id);
+      prevIndex = (currentIndex - 1 + queue.length) % queue.length;
+    }
+
+    const prevTrack = queue[prevIndex];
+    if (prevTrack) {
+      get().setCurrentTrack(prevTrack);
+    }
   },
 
   toggleShuffle: () => set((s) => ({ isShuffle: !s.isShuffle })),

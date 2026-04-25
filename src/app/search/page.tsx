@@ -4,14 +4,16 @@ import { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import { useSearchStore } from '@/store/useSearchStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLibraryStore } from '@/store/useLibraryStore';
+import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import TrackOptionsMenu from '@/components/TrackOptionsMenu';
 
 const TABS = ['Global (YouTube)', 'Mainstream', 'Regional Classics', 'Open Library', 'Podcasts'];
 const LIMIT = 25;
 
 export default function SearchPage() {
   const { query } = useSearchStore();
-  const { setCurrentTrack } = usePlayerStore();
+  const { setCurrentTrack, setQueue } = usePlayerStore();
   
   const [activeTab, setActiveTab] = useState(TABS[0]);
   const [results, setResults] = useState<any[]>([]);
@@ -114,6 +116,9 @@ export default function SearchPage() {
 
   const totalPages = Math.ceil(total / LIMIT);
 
+  const { likedSongs, toggleLike, isLiked, isInLibrary } = useLibraryStore();
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
   return (
     <div className={styles.searchPage}>
       {/* Source Tabs */}
@@ -140,7 +145,14 @@ export default function SearchPage() {
               <div className={styles.loading}>Searching global catalog...</div>
             ) : results.length > 0 ? (
               results.map((song) => (
-                <div key={song.id} className={styles.songRow} onClick={() => setCurrentTrack(song)}>
+                <div 
+                  key={song.id} 
+                  className={styles.songRow} 
+                  onClick={() => {
+                    setQueue(results);
+                    setCurrentTrack(song);
+                  }}
+                >
                   <div className={styles.songMain}>
                     <img src={song.cover || song.albumArt} alt="" className={styles.songArt} style={{ objectFit: 'cover' }} />
                     <div className={styles.songMeta}>
@@ -148,6 +160,27 @@ export default function SearchPage() {
                       <span className={styles.songArtist}>{song.artist}</span>
                     </div>
                     {song.source !== 'youtube' && <span className={styles.songGenreTag}>{song.source}</span>}
+                  </div>
+                  <div className={styles.songActions} style={{ position: 'relative' }}>
+                    <button 
+                      className={`${styles.likeBtn} ${isInLibrary(song.id) ? styles.liked : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveMenuId(activeMenuId === song.id ? null : song.id);
+                      }}
+                    >
+                      <Heart 
+                        size={20} 
+                        fill={isInLibrary(song.id) ? "var(--accent-primary)" : "none"} 
+                        color={isInLibrary(song.id) ? "var(--accent-primary)" : "currentColor"}
+                      />
+                    </button>
+                    {activeMenuId === song.id && (
+                      <TrackOptionsMenu 
+                        track={song} 
+                        onClose={() => setActiveMenuId(null)} 
+                      />
+                    )}
                   </div>
                 </div>
               ))

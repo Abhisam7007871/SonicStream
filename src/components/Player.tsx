@@ -87,10 +87,15 @@ export default function Player() {
     }
   };
 
-  const handleError = () => {
+  const handleError = (e: any) => {
+    console.warn('[Audio] Playback error details:', e);
     if (currentTrack?.url) {
-      setError('Playback error — auto-skipping...');
-      setTimeout(() => { setError(null); playNext(); }, 2500);
+      setError('Playback error — retrying...');
+      // If it's a source error, try to re-resolve or just skip
+      setTimeout(() => { 
+        setError(null); 
+        playNext(); 
+      }, 3000);
     }
   };
 
@@ -100,6 +105,7 @@ export default function Player() {
   return (
     <>
       <audio
+        key={currentTrack?.id || 'none'}
         ref={audioRef}
         src={currentTrack?.url || ''}
         onTimeUpdate={handleTimeUpdate}

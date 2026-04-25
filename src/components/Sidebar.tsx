@@ -5,8 +5,11 @@ import { Home, Search, Library, PlusSquare, Heart, Music2, Mic2 } from 'lucide-r
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
+import { useLibraryStore } from '@/store/useLibraryStore';
+
 export default function Sidebar() {
   const pathname = usePathname();
+  const { playlists } = useLibraryStore();
 
   const navItems = [
     { href: '/', icon: <Home size={20} />, label: 'Home' },
@@ -42,8 +45,8 @@ export default function Sidebar() {
             <span>Create Playlist</span>
           </button>
           <Link 
-            href="/collection/tracks" 
-            className={`${styles.navLink} ${pathname === '/collection/tracks' ? styles.active : ''}`}
+            href="/playlist/liked-songs" 
+            className={`${styles.navLink} ${pathname === '/playlist/liked-songs' ? styles.active : ''}`}
           >
             <Heart size={20} />
             <span>Liked Songs</span>
@@ -63,10 +66,15 @@ export default function Sidebar() {
       </nav>
 
       <div className={styles.playlists}>
-        <Link href="/playlist/1" className={styles.playlistItem}>Chill Lo-fi Beats</Link>
-        <Link href="/playlist/2" className={styles.playlistItem}>Workout Energy</Link>
-        <Link href="/playlist/3" className={styles.playlistItem}>Deep Focus Mix</Link>
-        <Link href="/playlist/4" className={styles.playlistItem}>Morning Coffee</Link>
+        {playlists.filter(p => p.id !== 'liked-songs').map((playlist) => (
+          <Link 
+            key={playlist.id} 
+            href={`/playlist/${playlist.id}`} 
+            className={`${styles.playlistItem} ${pathname === `/playlist/${playlist.id}` ? styles.activeItem : ''}`}
+          >
+            {playlist.name}
+          </Link>
+        ))}
       </div>
     </aside>
   );

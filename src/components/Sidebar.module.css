@@ -135,6 +135,11 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.activeItem {
+  color: white !important;
+  font-weight: 800;
+}
+
 @media (max-width: 1200px) {
   .logoText, .sectionTitle, .navLink span, .playlistItem {
     display: none;
