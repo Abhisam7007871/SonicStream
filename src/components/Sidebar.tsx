@@ -1,8 +1,19 @@
+"use client";
+
 import styles from './Sidebar.module.css';
 import { Home, Search, Library, PlusSquare, Heart, Music2, Mic2 } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
+  const navItems = [
+    { href: '/', icon: <Home size={20} />, label: 'Home' },
+    { href: '/search', icon: <Search size={20} />, label: 'Search' },
+    { href: '/library', icon: <Library size={20} />, label: 'Your Library' },
+  ];
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
@@ -12,18 +23,16 @@ export default function Sidebar() {
 
       <nav className={styles.nav}>
         <div className={styles.section}>
-          <Link href="/" className={`${styles.navLink} ${styles.active}`}>
-            <Home size={20} />
-            <span>Home</span>
-          </Link>
-          <Link href="/search" className={styles.navLink}>
-            <Search size={20} />
-            <span>Search</span>
-          </Link>
-          <Link href="/library" className={styles.navLink}>
-            <Library size={20} />
-            <span>Your Library</span>
-          </Link>
+          {navItems.map((item) => (
+            <Link 
+              key={item.href}
+              href={item.href} 
+              className={`${styles.navLink} ${pathname === item.href ? styles.active : ''}`}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </Link>
+          ))}
         </div>
 
         <div className={styles.section}>
@@ -32,7 +41,10 @@ export default function Sidebar() {
             <PlusSquare size={20} />
             <span>Create Playlist</span>
           </button>
-          <Link href="/collection/tracks" className={styles.navLink}>
+          <Link 
+            href="/collection/tracks" 
+            className={`${styles.navLink} ${pathname === '/collection/tracks' ? styles.active : ''}`}
+          >
             <Heart size={20} />
             <span>Liked Songs</span>
           </Link>
@@ -40,7 +52,10 @@ export default function Sidebar() {
 
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>Podcasts</h3>
-          <Link href="/podcasts" className={styles.navLink}>
+          <Link 
+            href="/podcasts" 
+            className={`${styles.navLink} ${pathname === '/podcasts' ? styles.active : ''}`}
+          >
             <Mic2 size={20} />
             <span>Latest Episodes</span>
           </Link>

@@ -6,8 +6,24 @@
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  padding: 32px 16px;
+  padding: 32px 16px 120px;
   transition: var(--transition-smooth);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
 }
 
 .logo {
@@ -99,8 +115,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
-  flex-grow: 1;
+  flex-shrink: 0;
 }
 
 .playlistItem {

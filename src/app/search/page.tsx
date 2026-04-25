@@ -4,97 +4,115 @@ import { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import { useSearchStore } from '@/store/useSearchStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
-import { Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const TABS = ['Global (YouTube)', 'Mainstream', 'Regional Classics', 'Open Library', 'Podcasts'];
+const LIMIT = 25;
 
 export default function SearchPage() {
   const { query } = useSearchStore();
   const { setCurrentTrack } = usePlayerStore();
-  const [activeTab, setActiveTab] = useState(TABS[0]);
   
+  const [activeTab, setActiveTab] = useState(TABS[0]);
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   // Podcast specific state
   const [shows, setShows] = useState<any[]>([]);
   const [activeShow, setActiveShow] = useState<any>(null);
   const [episodes, setEpisodes] = useState<any[]>([]);
 
-  // Fetch logic based on tab and query
+  // Debounce logic
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+      setPage(1); // Reset to page 1 on new search
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Reset page on tab change
+  useEffect(() => {
+    setPage(1);
+    setActiveShow(null);
+  }, [activeTab]);
+
+  // Fetch logic
   useEffect(() => {
     setLoading(true);
+    const API_BASE = 'http://localhost:4000';
     
     if (activeTab === 'Global (YouTube)') {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
-      const endpoint = query.trim() 
-        ? `${API_BASE}/api/youtube/search?q=${encodeURIComponent(query)}`
-        : `${API_BASE}/api/youtube/search?q=top+music+hits+2024`;
-      
+      const endpoint = `${API_BASE}/api/youtube/search?q=${encodeURIComponent(debouncedQuery || 'top music hits 2024')}&page=${page}&limit=${LIMIT}`;
       fetch(endpoint)
-        .then(r => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r.json();
+        .then(r => r.json())
+        .then(data => { 
+          setResults(data.results || []); 
+          setTotal(data.total || 0);
+          setLoading(false); 
         })
-        .then(data => { setResults(data.results || []); setLoading(false); })
-        .catch(err => { 
-          console.error('[Search] YouTube search failed:', err);
-          setResults([]);
-          setLoading(false);
-        });
+        .catch(() => { setResults([]); setLoading(false); });
     }
     else if (activeTab === 'Mainstream') {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
-      const endpoint = query.trim() 
-        ? `${API_BASE}/api/music/search?q=${encodeURIComponent(query)}`
-        : `${API_BASE}/api/music/search?q=top+hits+2024`;
-      
+      const endpoint = `${API_BASE}/api/music/search?q=${encodeURIComponent(debouncedQuery || 'top hits 2024')}&page=${page}&limit=${LIMIT}`;
       fetch(endpoint)
         .then(r => r.json())
-        .then(data => { setResults(data.results || []); setLoading(false); });
+        .then(data => { 
+          setResults(data.results || []); 
+          setTotal(data.total || 0);
+          setLoading(false); 
+        });
     } 
     else if (activeTab === 'Regional Classics') {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
-      const endpoint = query.trim()
-        ? `${API_BASE}/api/archive/search?q=${encodeURIComponent(query)}`
-        : `${API_BASE}/api/archive/indian/oldbollywood`;
+      const endpoint = debouncedQuery.trim()
+        ? `${API_BASE}/api/archive/search?q=${encodeURIComponent(debouncedQuery)}&page=${page}&limit=${LIMIT}`
+        : `${API_BASE}/api/archive/indian/oldbollywood?limit=100`;
         
       fetch(endpoint)
         .then(r => r.json())
-        .then(data => { setResults(data.tracks || []); setLoading(false); });
+        .then(data => { 
+          setResults(data.tracks || []); 
+          setTotal(data.total || data.tracks?.length || 0);
+          setLoading(false); 
+        });
     }
     else if (activeTab === 'Open Library') {
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
-      const endpoint = query.trim()
-        ? `${API_BASE}/api/music/free-search?q=${encodeURIComponent(query)}`
-        : `${API_BASE}/api/music/free-search?q=remix+instrumental`;
-        
+      const endpoint = `${API_BASE}/api/music/free-search?q=${encodeURIComponent(debouncedQuery || 'remix instrumental')}&page=${page}&limit=${LIMIT}`;
       fetch(endpoint)
         .then(r => r.json())
-        .then(data => { setResults(data.results || []); setLoading(false); })
-        .catch(err => { console.error('[Search] Free search failed:', err); setResults([]); setLoading(false); });
+        .then(data => { 
+          setResults(data.results || []); 
+          setTotal(data.total || 0);
+          setLoading(false); 
+        });
     }
     else if (activeTab === 'Podcasts') {
-      // Load top Indian podcasts
-      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
       fetch(`${API_BASE}/api/podcasts/indian`)
         .then(r => r.json())
-        .then(data => { setShows(data.shows || []); setLoading(false); });
+        .then(data => { 
+          setShows(data.shows || []); 
+          setLoading(false); 
+        });
     }
-  }, [query, activeTab]);
+  }, [debouncedQuery, activeTab, page]);
 
-  // Load episodes when a podcast is clicked
   const loadPodcastFeed = (feedUrl: string, showData: any) => {
     setLoading(true);
     setActiveShow(showData);
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:4000';
-    fetch(`${API_BASE}/api/podcasts/feed?url=${encodeURIComponent(feedUrl)}`)
+    fetch(`http://localhost:4000/api/podcasts/feed?url=${encodeURIComponent(feedUrl)}`)
       .then(r => r.json())
       .then(data => {
         setEpisodes(data.episodes || []);
         setLoading(false);
       });
   };
+
+  const totalPages = Math.ceil(total / LIMIT);
 
   return (
     <div className={styles.searchPage}>
@@ -104,8 +122,7 @@ export default function SearchPage() {
           <button
             key={tab}
             className={`${styles.genrePill} ${activeTab === tab ? styles.genrePillActive : ''}`}
-            onClick={() => { setActiveTab(tab); setActiveShow(null); }}
-            style={activeTab === tab ? { background: 'white', color: 'black' } : {}}
+            onClick={() => setActiveTab(tab)}
           >
             {tab}
           </button>
@@ -113,59 +130,62 @@ export default function SearchPage() {
       </div>
 
       <h2 className={styles.sectionTitle}>
-        {activeTab === 'Podcasts' && activeShow ? activeShow.title : (query ? `Results for "${query}"` : 'Browse')}
+        {activeTab === 'Podcasts' && activeShow ? activeShow.title : (debouncedQuery ? `Results for "${debouncedQuery}"` : 'Browse')}
       </h2>
 
-      {/* Mainstream & Archive Songs List */}
       {activeTab !== 'Podcasts' && (
-        <div className={styles.songsListFull}>
-          {loading ? (
-            <div className={styles.loading}>Searching global catalog...</div>
-          ) : results.length > 0 ? (
-            results.map((song) => (
-              <div 
-                key={song.id} 
-                className={styles.songRow}
-                onClick={() => setCurrentTrack(song)}
-              >
-                <div className={styles.songMain}>
-                  {song.cover ? (
-                    <img src={song.cover} alt="cover" className={styles.songArt} style={{ objectFit: 'cover' }} />
-                  ) : (
-                    <div className={styles.songArt} style={{ background: '#333' }} />
-                  )}
-                  <div className={styles.songMeta}>
-                    <span className={styles.songName}>{song.title}</span>
-                    <span className={styles.songArtist}>{song.artist}</span>
+        <>
+          <div className={styles.songsListFull}>
+            {loading ? (
+              <div className={styles.loading}>Searching global catalog...</div>
+            ) : results.length > 0 ? (
+              results.map((song) => (
+                <div key={song.id} className={styles.songRow} onClick={() => setCurrentTrack(song)}>
+                  <div className={styles.songMain}>
+                    <img src={song.cover || song.albumArt} alt="" className={styles.songArt} style={{ objectFit: 'cover' }} />
+                    <div className={styles.songMeta}>
+                      <span className={styles.songName}>{song.title}</span>
+                      <span className={styles.songArtist}>{song.artist}</span>
+                    </div>
+                    {song.source !== 'youtube' && <span className={styles.songGenreTag}>{song.source}</span>}
                   </div>
-                  {song.source === 'internetarchive' && (
-                    <span className={styles.songGenreTag} style={{ color: '#00e5ff' }}>Public Domain</span>
-                  )}
-                  {song.source === 'ccmixter' && (
-                    <span className={styles.songGenreTag} style={{ color: '#7c4dff' }}>ccMixter</span>
-                  )}
-                  {song.source === 'fma' && (
-                    <span className={styles.songGenreTag} style={{ color: '#ff4081' }}>FMA</span>
-                  )}
-                  {song.source === 'musopen' && (
-                    <span className={styles.songGenreTag} style={{ color: '#00bcd4' }}>Classical</span>
-                  )}
                 </div>
-              </div>
-            ))
-          ) : (
-            <div>No tracks found.</div>
+              ))
+            ) : (
+              <div className={styles.noResults}>No tracks found.</div>
+            )}
+          </div>
+
+          {/* Pagination Controls */}
+          {total > LIMIT && (
+            <div className={styles.pagination}>
+              <button 
+                disabled={page === 1} 
+                onClick={() => setPage(p => p - 1)}
+                className={styles.pageBtn}
+              >
+                <ChevronLeft size={20} /> Previous
+              </button>
+              <span className={styles.pageInfo}>Page {page} of {totalPages || 1}</span>
+              <button 
+                disabled={page >= totalPages} 
+                onClick={() => setPage(p => p + 1)}
+                className={styles.pageBtn}
+              >
+                Next <ChevronRight size={20} />
+              </button>
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {/* Podcasts Content */}
       {activeTab === 'Podcasts' && !activeShow && (
         <div className={styles.grid}>
           {loading ? <div>Loading Podcasts...</div> : shows.map((show, idx) => (
-            <div key={idx} className={styles.categoryCard} style={{ background: '#27272a' }} onClick={() => loadPodcastFeed(show.feedUrl, show)}>
+            <div key={idx} className={styles.categoryCard} onClick={() => loadPodcastFeed(show.feedUrl, show)}>
               <h3 className={styles.categoryTitle}>{show.title}</h3>
-              <p style={{ color: '#aaa', fontSize: '0.85rem', marginTop: 4 }}>{show.author}</p>
+              <p className={styles.categoryAuthor}>{show.author}</p>
               {show.cover && <img src={show.cover} className={styles.cardImagePlaceholder} alt="" />}
             </div>
           ))}
@@ -174,7 +194,7 @@ export default function SearchPage() {
 
       {activeTab === 'Podcasts' && activeShow && (
         <div className={styles.songsListFull}>
-          <button onClick={() => setActiveShow(null)} style={{ marginBottom: 16, background: 'transparent', color: 'white', border: '1px solid #555', padding: '6px 16px', borderRadius: 20, cursor: 'pointer' }}>
+          <button onClick={() => setActiveShow(null)} className={styles.backBtn}>
             ← Back to Shows
           </button>
           {loading ? <div>Loading Episodes...</div> : episodes.map(ep => (
@@ -183,14 +203,13 @@ export default function SearchPage() {
                 <img src={ep.cover} alt="" className={styles.songArt} style={{ objectFit: 'cover' }} />
                 <div className={styles.songMeta}>
                   <span className={styles.songName}>{ep.title}</span>
-                  <span className={styles.songArtist}>{new Date(ep.pubDate).toLocaleDateString()} • {Math.floor(ep.duration/60)} mins</span>
+                  <span className={styles.songArtist}>{new Date(ep.pubDate).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
-      
     </div>
   );
 }

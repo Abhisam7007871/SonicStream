@@ -27,16 +27,12 @@ export default function Player() {
   // Sync isPlaying state with native audio element
   useEffect(() => {
     if (!audioRef.current) return;
-    
+
     if (isPlaying) {
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
         playPromise.catch(error => {
           console.error('[Audio] Playback interrupted or blocked:', error);
-          if (error.name === 'NotAllowedError') {
-             // Browser blocked autoplay
-             // We don't flip isPlaying back to false yet, let user click again
-          }
         });
       }
     } else {
@@ -51,8 +47,7 @@ export default function Player() {
     }
   }, [volume]);
 
-  // Sync seek (only when user manually seeks, not on every progress update)
-  // We handle seek by checking if the store progress differs significantly from audio current time
+  // Sync seek
   useEffect(() => {
     if (audioRef.current && Math.abs(audioRef.current.currentTime - progress) > 2) {
       audioRef.current.currentTime = progress;
@@ -60,7 +55,7 @@ export default function Player() {
   }, [progress]);
 
   const formatTime = (time: number) => {
-    if (isNaN(time)) return "0:00";
+    if (isNaN(time) || time === 0) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
@@ -69,15 +64,12 @@ export default function Player() {
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       const current = audioRef.current.currentTime;
-      if (current > 0) {
-        setProgress(current);
-      }
+      setProgress(current);
     }
   };
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      console.log('[Audio] Metadata loaded. Duration:', audioRef.current.duration);
       setDuration(audioRef.current.duration);
       setIsLoading(false);
       setError(null);
@@ -85,7 +77,6 @@ export default function Player() {
   };
 
   const handleEnded = () => {
-    console.log('[Audio] Track ended');
     if (isRepeat) {
       if (audioRef.current) {
         audioRef.current.currentTime = 0;
@@ -96,18 +87,18 @@ export default function Player() {
     }
   };
 
-  const handleError = (e: any) => {
-    console.error('[Audio] Native Error:', e);
-    // If it's a real error (not just empty src)
+  const handleError = () => {
     if (currentTrack?.url) {
       setError('Playback error — auto-skipping...');
       setTimeout(() => { setError(null); playNext(); }, 2500);
     }
   };
 
+  const progressPct = duration > 0 ? (progress / duration) * 100 : 0;
+  const volumePct = volume * 100;
+
   return (
     <>
-      {/* ── Native Audio Engine ─────────────────────────────────────────── */}
       <audio
         ref={audioRef}
         src={currentTrack?.url || ''}
@@ -121,13 +112,19 @@ export default function Player() {
         preload="auto"
       />
 
-      <footer className={`${styles.player} glass`}>
+      <footer
+        className={styles.player}
+        style={{
+          '--progress-pct': `${progressPct}%`,
+          '--volume-pct': `${volumePct}%`
+        } as any}
+      >
         <div className={styles.trackInfo}>
           {currentTrack && (
             <>
-              <img 
-                src={currentTrack.albumArt || currentTrack.cover} 
-                alt={currentTrack.title} 
+              <img
+                src={currentTrack.albumArt || currentTrack.cover}
+                alt={currentTrack.title}
                 className={styles.albumArt}
               />
               <div className={styles.details}>
@@ -140,36 +137,34 @@ export default function Player() {
 
         <div className={styles.controlsContainer}>
           <div className={styles.mainControls}>
-            <button 
+            <button
               className={`${styles.iconBtn} ${isShuffle ? styles.active : ''}`}
               onClick={toggleShuffle}
-              title="Shuffle"
             >
-              <Shuffle size={18} />
+              <Shuffle size={16} />
             </button>
             <button className={styles.iconBtn} onClick={playPrevious}>
-              <SkipBack size={22} fill="currentColor" />
+              <SkipBack size={20} fill="currentColor" />
             </button>
-            <button 
-              className={styles.playBtn} 
+            <button
+              className={styles.playBtn}
               onClick={togglePlay}
               disabled={!currentTrack}
             >
               {isPlaying ? (
-                <Pause size={24} fill="currentColor" />
+                <Pause size={20} fill="currentColor" />
               ) : (
-                <Play size={24} fill="currentColor" style={{ marginLeft: '2px' }} />
+                <Play size={20} fill="currentColor" style={{ marginLeft: '2px' }} />
               )}
             </button>
             <button className={styles.iconBtn} onClick={playNext}>
-              <SkipForward size={22} fill="currentColor" />
+              <SkipForward size={20} fill="currentColor" />
             </button>
-            <button 
+            <button
               className={`${styles.iconBtn} ${isRepeat ? styles.active : ''}`}
               onClick={toggleRepeat}
-              title="Repeat"
             >
-              <Repeat size={18} />
+              <Repeat size={16} />
             </button>
           </div>
 
@@ -181,6 +176,7 @@ export default function Player() {
                 min={0}
                 max={duration || 100}
                 value={progress}
+                step={0.1}
                 onChange={(e) => {
                   const val = parseFloat(e.target.value);
                   setProgress(val);
@@ -188,14 +184,10 @@ export default function Player() {
                 }}
                 className={styles.progressBar}
               />
-              <div 
-                className={styles.progressFill} 
-                style={{ width: `${(progress / (duration || 100)) * 100}%` }}
-              />
             </div>
             <span className={styles.time}>{formatTime(duration)}</span>
-            {isLoading && !error && <span className={styles.loadingPulse}> • Loading...</span>}
-            {error && <span className={styles.errorText}> • {error}</span>}
+            {isLoading && !error && <span className={styles.loadingPulse}>Loading...</span>}
+            {error && <span className={styles.errorText}>{error}</span>}
           </div>
         </div>
 
@@ -203,13 +195,10 @@ export default function Player() {
           <button className={styles.iconBtn}><Mic2 size={18} /></button>
           <button className={styles.iconBtn}><ListMusic size={18} /></button>
           <button className={styles.iconBtn}><MonitorSpeaker size={18} /></button>
+          <div style={{ marginLeft: '8px', marginRight: '8px' }}>
+            <QualitySelector />
+          </div>
           <div className={styles.volumeContainer}>
-            <button 
-              className={styles.iconBtn}
-              onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
-            >
-              {volume === 0 ? <VolumeX size={18} /> : volume < 0.5 ? <Volume1 size={18} /> : <Volume2 size={18} />}
-            </button>
             <input
               type="range"
               min={0}
@@ -219,9 +208,14 @@ export default function Player() {
               onChange={(e) => setVolume(parseFloat(e.target.value))}
               className={styles.volumeSlider}
             />
+            <button
+              className={styles.iconBtn}
+              onClick={() => setVolume(volume === 0 ? 0.7 : 0)}
+            >
+              {volume === 0 ? <VolumeX size={18} /> : volume < 0.5 ? <Volume1 size={18} /> : <Volume2 size={18} />}
+            </button>
           </div>
-          <QualitySelector />
-          <button className={styles.iconBtn}><Maximize2 size={18} /></button>
+          {/* <button className={styles.iconBtn}><Maximize2 size={18} /></button> */}
         </div>
       </footer>
     </>
