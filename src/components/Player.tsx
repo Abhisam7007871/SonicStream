@@ -27,8 +27,6 @@ export default function Player() {
   const [error, setError] = useState<string | null>(null);
   const playerRef = useRef<any>(null);
 
-
-
   const formatTime = (time: number) => {
     if (!time || isNaN(time)) return '0:00';
     const minutes = Math.floor(time / 60);
@@ -81,65 +79,77 @@ export default function Player() {
 
   return (
     <>
-      {/* YouTube Video Player (Floating) - Commented out as requested */}
-      {/* 
+      {/* ── Hidden Audio Engine ──────────────────────────────────────────────
+           Positioned off-screen (not overflow:hidden — some browsers block
+           audio loading in 0×0 overflow:hidden containers).
+           All sources are now plain audio URLs:
+             - YouTube  → backend proxy /api/youtube/stream?id=...  (audio CDN)
+             - iTunes   → Apple CDN .m4a 30-second preview
+             - Archive  → direct mp3 / ogg
+      ──────────────────────────────────────────────────────────────────── */}
       <div
         style={{
           position: 'fixed',
-          bottom: '100px',
-          right: '20px',
-          width: currentTrack?.source === 'youtube' ? '360px' : '0px',
-          height: currentTrack?.source === 'youtube' ? '202px' : '0px',
-          opacity: currentTrack?.source === 'youtube' ? 1 : 0,
-          pointerEvents: currentTrack?.source === 'youtube' ? 'auto' : 'none',
-          overflow: 'hidden',
-          zIndex: 9999,
-          borderRadius: '16px',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.6)',
-          background: '#000',
-          transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-          border: '1px solid rgba(255,255,255,0.1)'
+          top: '-9999px',
+          left: '-9999px',
+          width: '1px',
+          height: '1px',
+          pointerEvents: 'none',
         }}
       >
         <ReactPlayer
-          key={currentTrack?.id || 'empty'}
+          key={currentTrack?.id ?? 'empty'}
           ref={playerRef}
           url={currentTrack?.url || ''}
-          playing={isPlaying}
+          playing={isPlaying && !!currentTrack?.url}
           volume={volume}
           muted={false}
           playsinline={true}
           loop={isRepeat}
-          onEnded={() => { console.log('[Player] Ended'); playNext(); }}
+          width="1px"
+          height="1px"
+          onEnded={() => {
+            console.log('[Player] ✓ Track ended');
+            if (isRepeat) {
+              playerRef.current?.seekTo(0);
+            } else {
+              playNext();
+            }
+          }}
           onProgress={({ playedSeconds }) => {
             if (isPlaying) setProgress(playedSeconds);
           }}
-          onDuration={(dur) => { console.log('[Player] Duration:', dur); setDuration(dur); }}
-          onBuffer={() => { console.log('[Player] Buffering...'); setIsLoading(true); }}
-          onBufferEnd={() => { console.log('[Player] Buffer ended'); setIsLoading(false); }}
-          onReady={() => { console.log('[Player] Ready:', currentTrack?.url); setIsLoading(false); setError(null); }}
+          onDuration={(dur) => {
+            console.log('[Player] Duration:', dur);
+            setDuration(dur);
+          }}
+          onBuffer={() => {
+            console.log('[Player] Buffering...');
+            setIsLoading(true);
+          }}
+          onBufferEnd={() => {
+            console.log('[Player] Buffer end');
+            setIsLoading(false);
+          }}
+          onReady={() => {
+            console.log('[Player] ✓ Ready:', currentTrack?.url?.substring(0, 70));
+            setIsLoading(false);
+            setError(null);
+          }}
           onError={(e) => {
-            if (currentTrack?.url) {
-              console.error('[Player] Error:', e);
-              setError('Playback failed. Trying next...');
-              setTimeout(playNext, 3000);
-            }
+            console.error('[Player] ✗ Error:', e, '| URL:', currentTrack?.url);
+            setError('Audio extraction failed — skipping...');
+            setIsLoading(false);
+            setTimeout(() => { setError(null); playNext(); }, 2000);
           }}
           config={{
-            youtube: {
-              playerVars: {
-                autoplay: 1,
-                controls: 1,
-                modestbranding: 1,
-                origin: typeof window !== 'undefined' ? window.location.origin : ''
-              }
-            }
+            file: {
+              forceAudio: true,
+              attributes: { crossOrigin: 'anonymous' },
+            },
           }}
-          width="100%"
-          height="100%"
         />
       </div>
-      */}
 
       <footer className={`${styles.player} glass`}>
         {/* Current Song Info */}

@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth.routes';
 import { authMiddleware, AuthRequest } from './middleware/auth.middleware';
 import { AudiomackService } from './services/audiomack.service';
+import { Readable } from 'stream';
 
 dotenv.config();
 
@@ -160,42 +161,64 @@ app.get('/api/music/stream', async (req, res) => {
   }
 });
 
-// YouTube Direct Stream Proxy (Piped for reliability)
+// YouTube Direct Stream Proxy — resolves to a CDN audio URL and pipes it
 app.get('/api/youtube/stream', async (req, res) => {
   const { id } = req.query as { id: string };
   if (!id) return res.status(400).send('Missing video id');
-  
+
   console.log(`[Stream] Request for video: ${id}`);
   try {
     const audioUrl = await getInvidiousAudioUrl(id);
-    console.log(`[Stream] Piping from: ${audioUrl.substring(0, 50)}...`);
-    
-    const response = await fetch(audioUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
+
+    if (!audioUrl) {
+      console.error(`[Stream] Could not resolve audio URL for ${id}`);
+      return res.status(503).send('Audio extraction failed for this video. Try another track.');
+    }
+
+    console.log(`[Stream] Resolved URL: ${audioUrl.substring(0, 80)}...`);
+
+    // Forward Range header so the browser can seek
+    const upstreamHeaders: Record<string, string> = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    };
+    if (req.headers.range) {
+      upstreamHeaders['Range'] = req.headers.range;
+    }
+
+    const response = await fetch(audioUrl, { 
+      method: req.method,
+      headers: upstreamHeaders 
     });
 
-    if (!response.ok) {
-      throw new Error(`Invidious stream returned ${response.status}`);
+    if (!response.ok && response.status !== 206) {
+      throw new Error(`Upstream CDN returned ${response.status}`);
     }
 
-    // Set headers for audio streaming
-    res.setHeader('Content-Type', response.headers.get('content-type') || 'audio/mpeg');
-    if (response.headers.has('content-length')) {
-      res.setHeader('Content-Length', response.headers.get('content-length')!);
-    }
+    // Mirror relevant headers
+    res.status(response.status);
+    const ct = response.headers.get('content-type');
+    if (ct) res.setHeader('Content-Type', ct);
+    const cl = response.headers.get('content-length');
+    if (cl) res.setHeader('Content-Length', cl);
+    const cr = response.headers.get('content-range');
+    if (cr) res.setHeader('Content-Range', cr);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Access-Control-Allow-Origin', '*');
 
-    // Pipe the stream
-    if (response.body) {
-      (response.body as any).pipe(res);
-    } else {
-      throw new Error("No response body from Invidious");
+    if (req.method === 'HEAD') {
+      return res.end();
     }
 
+    if (response.body) {
+      // Node.js global fetch returns a Web Stream. We convert it to a Node stream for Express.
+      Readable.fromWeb(response.body as any).pipe(res);
+    } else {
+      throw new Error('No response body from CDN');
+    }
   } catch (err: any) {
     console.error('[Stream] Error:', err.message);
-    res.status(500).send('Stream error: ' + err.message);
+    if (!res.headersSent) res.status(500).send('Stream error: ' + err.message);
   }
 });
 
