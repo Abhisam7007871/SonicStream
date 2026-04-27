@@ -92,138 +92,91 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
     return url;
   };
 
-  // ── 1. yt-dlp (most reliable, handles bot-detection) ──────────────────
-  const ytdlpUrl = await getAudioUrlViaYtDlp(videoId);
-  if (ytdlpUrl) return save(ytdlpUrl);
-
-  // ── 1.5 play-dl (Very reliable Node.js fallback) ──────────────────────
-  try {
-    console.log(`[play-dl] Trying for ${videoId}`);
-    const info = await play.video_info(`https://www.youtube.com/watch?v=${videoId}`);
-    const audioFormats = (info.format || []).filter(f => 
-      f.mimeType?.includes('audio') || (f.mimeType?.includes('video/mp4') && f.audioQuality)
-    );
-    audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-    
-    if (audioFormats.length > 0 && audioFormats[0].url) {
-      console.log('[play-dl] ✓ Success');
-      return save(audioFormats[0].url);
-    }
-  } catch (e: any) {
-    console.log(`[play-dl] Failed: ${e.message}`);
-  }
-
-  // ── 2. Piped API instances ─────────────────────────────────────────────
+  // ── 1. Piped API instances ─────────────────────────────────────────────
   const pipedInstances = [
-    'https://pipedapi.kavin.rocks',
-    'https://pipedapi.tokhmi.xyz',
-    'https://pipedapi.moomoo.me',
-    'https://api.piped.yt',
     'https://pipedapi.adminforge.de',
     'https://pipedapi.astartes.nl',
     'https://pipedapi.lunar.icu',
+    'https://pipedapi.kavin.rocks',
+    'https://pipedapi.tokhmi.xyz',
+    'https://api.piped.yt',
     'https://pipedapi.mha.fi',
     'https://pipedapi.us.mha.fi',
-    'https://pipedapi.drgns.space',
-    'https://pipedapi.bahno.xyz',
-    'https://pipedapi.syncit.pw',
   ];
 
   for (const piped of pipedInstances) {
     try {
       console.log(`[Piped] Trying ${piped} for ${videoId}`);
       const res = await fetch(`${piped}/streams/${videoId}`, {
-        signal: AbortSignal.timeout(8000) as any,
+        signal: AbortSignal.timeout(5000) as any,
         headers: { 'User-Agent': 'Mozilla/5.0' },
-      });
-      if (res.ok) {
+      }).catch(() => null);
+
+      if (res && res.ok) {
         const data = await res.json() as any;
-        const streams: any[] = data.audioStreams || [];
-        if (streams.length > 0) {
-          streams.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-          const url = streams[0].url;
+        const stream = data.audioStreams?.find((s: any) => s.format === 'WEBM' || s.format === 'M4A');
+        if (stream?.url) {
           console.log(`[Piped] ✓ Success via ${piped}`);
-          return save(url);
+          return save(stream.url);
         }
       }
     } catch (e: any) {
-      console.log(`[Piped] ${piped} failed: ${e.message}`);
+      // failover
     }
   }
 
-  // ── 3. yt-stream ──────────────────────────────────────────────────────
-  try {
-    console.log(`[yt-stream] Trying for ${videoId}`);
-    const stream = await ytStream.stream(videoId, { quality: 'high', type: 'audio' } as any);
-    if (stream?.url) {
-      console.log('[yt-stream] ✓ Success');
-      return save(stream.url);
-    }
-  } catch (e: any) {
-    console.log(`[yt-stream] Failed: ${e.message}`);
-  }
-
-  // ── 4. ytdl-core ──────────────────────────────────────────────────────
-  try {
-    console.log(`[ytdl-core] Trying for ${videoId}`);
-    const info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${videoId}`);
-    const format = ytdl.chooseFormat(info.formats, {
-      filter: 'audioonly',
-      quality: 'highestaudio',
-    });
-    if (format?.url) {
-      console.log('[ytdl-core] ✓ Success');
-      return save(format.url);
-    }
-  } catch (e: any) {
-    console.log(`[ytdl-core] Failed: ${e.message}`);
-  }
-
-  // ── 5. Invidious instances ─────────────────────────────────────────────
+  // ── 2. Invidious instances ─────────────────────────────────────────────
   const invidiousInstances = [
     'https://invidious.privacydev.net',
     'https://yewtu.be',
     'https://invidious.sethforprivacy.com',
     'https://invidious.kavin.rocks',
-    'https://invidious.namazso.eu',
-    'https://inv.tux.pizza',
-    'https://invidious.flokinet.to',
     'https://iv.melmac.space',
     'https://invidious.drgns.space',
     'https://invidious.tiekoetter.com',
-    'https://invidious.snopyta.org',
-    'https://inv.riverside.rocks',
   ];
 
   for (const instance of invidiousInstances) {
     try {
       console.log(`[Invidious] Trying ${instance} for ${videoId}`);
       const res = await fetch(`${instance}/api/v1/videos/${videoId}`, {
-        signal: AbortSignal.timeout(6000) as any,
+        signal: AbortSignal.timeout(5000) as any,
         headers: { 'User-Agent': 'Mozilla/5.0' },
-      });
-      if (res.ok) {
+      }).catch(() => null);
+
+      if (res && res.ok) {
         const data = await res.json() as any;
         const audioStreams = [
           ...(data.adaptiveFormats || []),
           ...(data.formatStreams || []),
-        ].filter(
-          (f: any) =>
-            (f.type && f.type.startsWith('audio/')) || f.container === 'm4a'
-        );
+        ].filter((f: any) => (f.type && f.type.startsWith('audio/')) || f.container === 'm4a');
+
         if (audioStreams.length > 0) {
-          audioStreams.sort(
-            (a: any, b: any) =>
-              (parseInt(b.bitrate) || 0) - (parseInt(a.bitrate) || 0)
-          );
-          const url = audioStreams[0].url;
+          audioStreams.sort((a: any, b: any) => (parseInt(b.bitrate) || 0) - (parseInt(a.bitrate) || 0));
           console.log(`[Invidious] ✓ Success via ${instance}`);
-          return save(url);
+          return save(audioStreams[0].url);
         }
       }
     } catch (e: any) {
-      console.log(`[Invidious] ${instance} failed: ${e.message}`);
+      // failover
     }
+  }
+
+  // ── 3. Fallback to Local Libs (Likely blocked on Render) ──────────────
+  try {
+    console.log(`[play-dl] Final fallback attempt for ${videoId}`);
+    const info = await play.video_info(`https://www.youtube.com/watch?v=${videoId}`).catch(() => null);
+    if (info) {
+      const audioFormats = (info.format || []).filter(f => 
+        f.mimeType?.includes('audio') || (f.mimeType?.includes('video/mp4') && f.audioQuality)
+      );
+      if (audioFormats.length > 0 && audioFormats[0].url) {
+        console.log('[play-dl] ✓ Success');
+        return save(audioFormats[0].url);
+      }
+    }
+  } catch (e: any) {
+    console.log(`[play-dl] Blocked: ${e.message}`);
   }
 
   console.error(`[Stream] ✗ All methods exhausted for ${videoId}`);
