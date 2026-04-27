@@ -5,6 +5,8 @@ import { PrismaClient } from '@prisma/client';
 import authRoutes from './routes/auth.routes';
 import { authMiddleware, AuthRequest } from './middleware/auth.middleware';
 import { AudiomackService } from './services/audiomack.service';
+import { Readable } from 'stream';
+import fetch from 'node-fetch';
 
 dotenv.config();
 
@@ -12,7 +14,13 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors()); // Temporarily relax CORS for verification
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Range', 'Accept-Ranges'],
+  exposedHeaders: ['Content-Range', 'Accept-Ranges', 'Content-Length', 'Content-Type'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Log all requests
@@ -42,6 +50,21 @@ app.get('/api/music/search', async (req, res) => {
     res.json({ query: term, total: results.length, results });
   } catch (err: any) {
     console.error('Search error:', err.message);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+import { searchYouTube } from './services/youtube.service';
+
+// YouTube Direct Search
+app.get('/api/youtube/search', async (req, res) => {
+  const { q } = req.query as { q?: string };
+  const term = q || 'top hits 2024';
+  try {
+    const results = await searchYouTube(term, 30);
+    res.json({ query: term, total: results.length, results });
+  } catch (err: any) {
+    console.error('YouTube Search error:', err.message);
     res.status(500).json({ message: err.message });
   }
 });
@@ -121,8 +144,9 @@ app.get('/api/music/audiomack-embed', async (req, res) => {
 //  AGGREGATOR ROUTES (YouTube, Archive, RSS)
 // ─────────────────────────────────────────────
 
-import { getYouTubeVideoId, getYouTubeAudioStream } from './services/youtube.service';
+import { searchYouTube, getInvidiousAudioUrl, getYouTubeVideoId } from './services/youtube.service';
 import * as ia from './services/archive.service';
+import { searchAllSources } from './services/freeMusic.service';
 import { parseFeed, INDIAN_PODCASTS } from './services/rss.service';
 
 // YouTube Audio Stream Proxy Component
@@ -136,14 +160,76 @@ app.get('/api/music/stream', async (req, res) => {
     const videoId = await getYouTubeVideoId(query);
     if (!videoId) return res.status(404).send('YouTube stream not found');
     
-    const stream = getYouTubeAudioStream(videoId);
-    res.setHeader('Content-Type', 'audio/mpeg');
-    stream.pipe(res);
+    const audioUrl = await getInvidiousAudioUrl(videoId);
+    res.redirect(audioUrl);
   } catch (err) {
     console.error('Stream proxy error:', err);
     res.status(500).send('Stream error');
   }
 });
+
+// YouTube Direct Stream Proxy — resolves to a CDN audio URL and pipes it
+app.get('/api/youtube/stream', async (req, res) => {
+  const { id } = req.query as { id: string };
+  if (!id) return res.status(400).send('Missing video id');
+
+  console.log(`[Stream] Request for video: ${id}`);
+  try {
+    const audioUrl = await getInvidiousAudioUrl(id);
+
+    if (!audioUrl) {
+      console.error(`[Stream] Could not resolve audio URL for ${id}`);
+      return res.status(503).send('Audio extraction failed. Try another track.');
+    }
+
+    // Forward Range header
+    const upstreamHeaders: any = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    };
+    if (req.headers.range) {
+      upstreamHeaders['range'] = req.headers.range;
+    }
+
+    console.log(`[Stream] Proxying from CDN: ${audioUrl.substring(0, 60)}...`);
+
+    const https = require('https');
+    const http = require('http');
+    const client = audioUrl.startsWith('https') ? https : http;
+
+    const proxyReq = client.get(audioUrl, { headers: upstreamHeaders }, (proxyRes: any) => {
+      // Forward status and essential headers only
+      res.status(proxyRes.statusCode);
+      
+      const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
+      headersToForward.forEach(h => {
+        if (proxyRes.headers[h]) res.setHeader(h, proxyRes.headers[h]);
+      });
+      
+      res.setHeader('Access-Control-Allow-Origin', '*');
+
+      let bytesSent = 0;
+      proxyRes.on('data', (chunk: any) => {
+        bytesSent += chunk.length;
+      });
+
+      proxyRes.on('end', () => {
+        console.log(`[Stream] ✓ Finished. Sent ${bytesSent} bytes for ${id}`);
+      });
+
+      proxyRes.pipe(res);
+    });
+
+    proxyReq.on('error', (err: any) => {
+      console.error('[Stream] Proxy Request Error:', err.message);
+      if (!res.headersSent) res.status(500).send('Stream error');
+    });
+
+  } catch (err: any) {
+    console.error('[Stream] Error:', err.message);
+    if (!res.headersSent) res.status(500).send('Stream error');
+  }
+});
+
 
 // Internet Archive endpoints (Indian catalog)
 app.get('/api/archive/search', async (req, res) => {
@@ -185,6 +271,18 @@ app.get('/api/podcasts/indian', (req, res) => {
   res.json({ shows: INDIAN_PODCASTS });
 });
 
+// Unified Free Music Search (ccMixter, FMA, Musopen, etc.)
+app.get('/api/music/free-search', async (req, res) => {
+  try {
+    const { q, limit = 20 } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query required' });
+    const results = await searchAllSources(q as string, Number(limit));
+    res.json({ results, total: results.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Protected Playlist Routes
 app.get('/api/playlists', authMiddleware, async (req: AuthRequest, res) => {
   if (!req.userId) return res.status(401).json({ message: 'Unauthorized' });
@@ -207,11 +305,12 @@ app.post('/api/playlists', authMiddleware, async (req: AuthRequest, res) => {
   res.status(201).json(playlist);
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(PORT as number, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
 
 process.on('SIGINT', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+// Trigger restart

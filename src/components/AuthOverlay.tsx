@@ -21,9 +21,10 @@ export default function AuthOverlay() {
     setLoading(true);
 
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-    
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
     try {
-      const res = await fetch(`http://localhost:4000${endpoint}`, {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -49,7 +50,7 @@ export default function AuthOverlay() {
       <div className={styles.modal}>
         <div className={styles.logo}>
           <Music size={32} color="var(--accent-primary)" />
-          <span className={styles.logoText}>SonicStream</span>
+          <span className={styles.logoText}>GaMaPa</span>
         </div>
 
         <h2 className={styles.title}>{isLogin ? 'Welcome back' : 'Create account'}</h2>
@@ -62,9 +63,9 @@ export default function AuthOverlay() {
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.inputGroup}>
             <label className={styles.label}>Email Address</label>
-            <input 
-              type="email" 
-              className={styles.input} 
+            <input
+              type="email"
+              className={styles.input}
               placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -74,9 +75,9 @@ export default function AuthOverlay() {
 
           <div className={styles.inputGroup}>
             <label className={styles.label}>Password</label>
-            <input 
-              type="password" 
-              className={styles.input} 
+            <input
+              type="password"
+              className={styles.input}
               placeholder="Min. 8 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -91,8 +92,8 @@ export default function AuthOverlay() {
 
         <p className={styles.toggleAction}>
           {isLogin ? "Don't have an account?" : "Already have an account?"}
-          <button 
-            className={styles.toggleBtn} 
+          <button
+            className={styles.toggleBtn}
             onClick={() => setIsLogin(!isLogin)}
           >
             {isLogin ? 'Sign up' : 'Login'}

@@ -1,75 +1,76 @@
 .navbar {
   position: sticky;
   top: 0;
-  height: 64px;
+  height: 80px;
   width: 100%;
+  padding: 0 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
   z-index: 100;
-  border-top: none;
-  border-left: none;
-  border-right: none;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .navigation {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .navButton {
-  background: rgba(0, 0, 0, 0.7);
-  border: none;
-  color: var(--text-primary);
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--glass-border);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: var(--transition-smooth);
 }
 
-.navButton:hover {
-  opacity: 0.8;
+.navButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.05);
 }
 
 .searchContainer {
+  flex: 1;
+  max-width: 500px;
   position: relative;
-  flex-grow: 1;
-  max-width: 460px;
-  margin: 0 16px;
+  display: flex;
+  align-items: center;
 }
 
 .searchIcon {
   position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
+  left: 20px;
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 .searchInput {
   width: 100%;
-  background: #242424;
-  border: none;
   height: 48px;
-  border-radius: 48px;
-  padding: 0 48px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: 100px;
+  padding: 0 20px 0 56px;
   color: white;
-  font-size: 0.9rem;
+  font-size: 15px;
   font-weight: 500;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
+  transition: var(--transition-smooth);
 }
 
 .searchInput:focus {
   outline: none;
-  background: #2a2a2a;
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
 }
 
 .actions {
@@ -79,29 +80,53 @@
 }
 
 .actionButton {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
 }
 
 .actionButton:hover {
-  color: white;
-  transform: scale(1.05);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .profileButton {
-  background: #242424;
-  border: none;
-  color: var(--text-primary);
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--glass-border);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: var(--transition-smooth);
+  overflow: hidden;
+}
+
+.profileButton:hover {
+  transform: scale(1.05);
+  border-color: var(--accent-primary);
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0 16px;
+  }
+  .searchContainer {
+    max-width: none;
+    margin: 0 12px;
+  }
+  .navigation {
+    display: none;
+  }
 }

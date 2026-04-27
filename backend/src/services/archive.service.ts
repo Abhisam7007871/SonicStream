@@ -1,4 +1,7 @@
 import fetch from 'node-fetch';
+import https from 'https';
+
+const insecureAgent = new https.Agent({ rejectUnauthorized: false });
 
 const BASE_SEARCH = 'https://archive.org/advancedsearch.php';
 const BASE_META   = 'https://archive.org/metadata';
@@ -46,13 +49,14 @@ export async function search(query: string, options: any = {}) {
     ].join(',')
   });
 
-  const res = await fetch(`${BASE_SEARCH}?${params}`);
+  const res = await fetch(`${BASE_SEARCH}?${params}`, { agent: insecureAgent });
   const data = await res.json() as any;
+  console.log(`[Archive] Search returned ${data.response?.docs?.length || 0} items`);
   return data.response?.docs || [];
 }
 
 export async function getItemFiles(identifier: string): Promise<ArchiveTrack[]> {
-  const res = await fetch(`${BASE_META}/${identifier}`);
+  const res = await fetch(`${BASE_META}/${identifier}`, { agent: insecureAgent });
   const data = await res.json() as any;
 
   const files = data.files || [];
@@ -84,7 +88,9 @@ export async function getItemFiles(identifier: string): Promise<ArchiveTrack[]> 
     year: data.metadata?.year,
     language: normalizeLanguage(data.metadata?.language),
     cover: coverUrl,
+    albumArt: coverUrl,
     streamUrl: `${BASE_STREAM}/${identifier}/${encodeURIComponent(f.name)}`,
+    url: `${BASE_STREAM}/${identifier}/${encodeURIComponent(f.name)}`,
     downloadUrl: `${BASE_STREAM}/${identifier}/${encodeURIComponent(f.name)}`,
     fileSize: f.size,
     format: f.format || getFormat(f.name),

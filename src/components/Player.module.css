@@ -3,197 +3,300 @@
   bottom: 0;
   left: 0;
   right: 0;
-  height: var(--player-height);
+  height: 100px;
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 320px 1fr 320px;
   align-items: center;
-  padding: 0 20px;
-  z-index: 1000;
-  border-top: none !important; /* overriden by glass class border if needed, but we want it subtle */
+  padding: 0 32px;
+  background: rgba(8, 8, 8, 0.95);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 -15px 50px rgba(0, 0, 0, 0.8);
+  z-index: 9999;
 }
 
-.songInfo {
+/* ── Left: Track Info ─────────────────────────────────────────── */
+.trackInfo {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  min-width: 0;
 }
 
 .albumArt {
-  width: 56px;
-  height: 56px;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+  width: 60px;
+  height: 60px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.placeholderArt {
-  width: 100%;
-  height: 100%;
-  background: var(--bg-surface-elevated);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
+.albumArt:hover {
+  transform: scale(1.1) translateY(-2px);
 }
 
-.trackDetails {
+.details {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
-.trackName {
-  font-size: 0.95rem;
+.title {
+  font-size: 15px;
   font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 2px;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  letter-spacing: -0.2px;
 }
 
-.artistName {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+.artist {
+  font-size: 13px;
+  color: #b3b3b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
   font-weight: 500;
 }
 
-.controls {
+/* ── Center: Controls & Progress ───────────────────────────────── */
+.controlsContainer {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
-.controlButtons {
+.mainControls {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
 }
 
-.playButton {
-  width: 36px;
-  height: 36px;
+.iconBtn {
+  background: none;
+  border: none;
+  color: #b3b3b3;
+  cursor: pointer;
+  padding: 8px;
   border-radius: 50%;
-  background: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: none;
-  cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.playButton:hover {
+.iconBtn:hover {
+  color: #ffffff;
   transform: scale(1.1);
 }
 
-.iconButton {
-  background: transparent;
+.iconBtn.active {
+  color: #1ed760;
+  position: relative;
+}
+
+.iconBtn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  background: #1ed760;
+  border-radius: 50%;
+}
+
+.playBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #000000;
   border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
 }
 
-.iconButton:hover {
-  color: var(--text-primary);
+.playBtn:hover {
+  transform: scale(1.08);
+  background: #f0f0f0;
 }
 
-.progressBarWrapper {
+.playBtn:active {
+  transform: scale(0.95);
+}
+
+.playBtn:disabled {
+  background: #404040;
+  color: #808080;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Progress Slider Styling */
+.progressContainer {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  max-width: 500px;
 }
 
-.timeLabel {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-  min-width: 32px;
+.time {
+  font-size: 11px;
+  font-weight: 500;
+  color: #a7a7a7;
+  min-width: 40px;
+  font-variant-numeric: tabular-nums;
 }
 
-.progressBar {
-  flex-grow: 1;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+.progressBarWrapper {
+  flex: 1;
+  height: 24px;
+  display: flex;
+  align-items: center;
   position: relative;
   cursor: pointer;
 }
 
-.progressFill {
-  height: 100%;
-  background: var(--text-primary);
+.progressBar {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  background: #4d4d4d;
   border-radius: 2px;
-  position: relative;
+  outline: none;
+  cursor: pointer;
+  z-index: 2;
+  background: linear-gradient(to right, #ffffff var(--progress-pct, 0%), #4d4d4d var(--progress-pct, 0%));
 }
 
-.player:hover .progressFill {
-  background: var(--accent-primary);
-}
-
-.progressKnob {
+.progressBar::-webkit-slider-thumb {
+  -webkit-appearance: none;
   width: 12px;
   height: 12px;
-  background: white;
   border-radius: 50%;
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translateY(-50%);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  display: none;
+  background: #ffffff;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
-.progressBar:hover .progressKnob {
-  display: block;
+.progressBarWrapper:hover .progressBar::-webkit-slider-thumb {
+  opacity: 1;
 }
 
+.progressBarWrapper:hover .progressBar {
+  background: linear-gradient(to right, #1ed760 var(--progress-pct, 0%), #4d4d4d var(--progress-pct, 0%));
+}
+
+/* ── Right: Extra Controls ─────────────────────────────────────── */
 .extraControls {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 8px;
 }
 
-.volumeControl {
+.volumeContainer {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 100px;
+  width: 110px;
+  margin-left: 4px;
 }
 
-.volumeBar {
-  flex-grow: 1;
+.volumeSlider {
+  flex: 1;
   height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  -webkit-appearance: none;
+  background: #4d4d4d;
   border-radius: 2px;
-}
-
-.volumeFill {
-  height: 100%;
-  background: var(--text-secondary);
-  border-radius: 2px;
-}
-
-.volumeControl:hover .volumeFill {
-  background: var(--accent-primary);
-}
-
-.qualityBadge {
-  background: transparent;
-  border: 1px solid var(--text-secondary);
-  color: var(--text-secondary);
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 2px 4px;
-  border-radius: 4px;
-  text-transform: uppercase;
+  outline: none;
   cursor: pointer;
+  background: linear-gradient(to right, #ffffff var(--volume-pct, 70%), #4d4d4d var(--volume-pct, 70%));
 }
 
-.qualityBadge:hover {
-  border-color: var(--text-primary);
-  color: var(--text-primary);
+.volumeSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ffffff;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.volumeContainer:hover .volumeSlider::-webkit-slider-thumb {
+  opacity: 1;
+}
+
+.volumeContainer:hover .volumeSlider {
+  background: linear-gradient(to right, #1ed760 var(--volume-pct, 70%), #4d4d4d var(--volume-pct, 70%));
+}
+
+/* Status Indicators */
+.loadingPulse {
+  font-size: 9px;
+  font-weight: 800;
+  color: #1ed760;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  animation: pulse 1.5s infinite;
+  margin-left: 12px;
+}
+
+.errorText {
+  font-size: 10px;
+  color: #e91429;
+  font-weight: 700;
+  margin-left: 12px;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .player {
+    grid-template-columns: 240px 1fr 180px;
+    padding: 0 16px;
+  }
+  .volumeContainer {
+    width: 90px;
+  }
+}
+
+@media (max-width: 768px) {
+  .player {
+    grid-template-columns: 1fr auto;
+    height: 80px;
+  }
+  .extraControls, .progressContainer {
+    display: none;
+  }
+  .trackInfo {
+    gap: 12px;
+  }
+  .albumArt {
+    width: 48px;
+    height: 48px;
+  }
 }
