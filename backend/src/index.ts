@@ -192,37 +192,31 @@ app.get('/api/youtube/stream', async (req, res) => {
 
     console.log(`[Stream] Proxying from CDN: ${audioUrl.substring(0, 60)}...`);
 
-    const https = require('https');
-    const http = require('http');
-    const client = audioUrl.startsWith('https') ? https : http;
-
-    const proxyReq = client.get(audioUrl, { headers: upstreamHeaders }, (proxyRes: any) => {
-      // Forward status and essential headers only
-      res.status(proxyRes.statusCode);
-      
-      const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
-      headersToForward.forEach(h => {
-        if (proxyRes.headers[h]) res.setHeader(h, proxyRes.headers[h]);
-      });
-      
-      res.setHeader('Access-Control-Allow-Origin', '*');
-
-      let bytesSent = 0;
-      proxyRes.on('data', (chunk: any) => {
-        bytesSent += chunk.length;
-      });
-
-      proxyRes.on('end', () => {
-        console.log(`[Stream] ✓ Finished. Sent ${bytesSent} bytes for ${id}`);
-      });
-
-      proxyRes.pipe(res);
+    const fetch = require('node-fetch');
+    const upstreamRes = await fetch(audioUrl, {
+      headers: upstreamHeaders,
+      redirect: 'follow'
     });
 
-    proxyReq.on('error', (err: any) => {
-      console.error('[Stream] Proxy Request Error:', err.message);
-      if (!res.headersSent) res.status(500).send('Stream error');
+    res.status(upstreamRes.status);
+    
+    const headersToForward = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'cache-control'];
+    headersToForward.forEach(h => {
+      if (upstreamRes.headers.has(h)) {
+        res.setHeader(h, upstreamRes.headers.get(h));
+      }
     });
+    
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    if (upstreamRes.body) {
+      upstreamRes.body.pipe(res);
+      upstreamRes.body.on('error', (err: any) => {
+        console.error('[Stream] Upstream body error:', err.message);
+      });
+    } else {
+      res.end();
+    }
 
   } catch (err: any) {
     console.error('[Stream] Error:', err.message);
