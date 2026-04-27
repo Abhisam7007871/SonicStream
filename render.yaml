@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: sonicstream-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATABASE_URL
+        value: "file:./dev.db" # Or sync: false if you use Postgres
