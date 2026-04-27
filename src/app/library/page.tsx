@@ -11,7 +11,7 @@ import { useState } from 'react';
 
 export default function LibraryPage() {
   const { playlists, likedSongs, createPlaylist } = useLibraryStore();
-  const { setCurrentTrack, setQueue } = usePlayerStore();
+  const { setCurrentTrack, setQueue }: any = usePlayerStore();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
 
