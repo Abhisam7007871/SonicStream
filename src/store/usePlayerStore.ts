@@ -45,7 +45,7 @@ interface PlayerState {
   decreaseVolume: () => void;
 }
 
-const API_BASE = 'http://localhost:4000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 /**
  * Resolves a track to a playable direct-audio URL.

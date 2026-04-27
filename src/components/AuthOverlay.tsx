@@ -21,9 +21,10 @@ export default function AuthOverlay() {
     setLoading(true);
 
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
     try {
-      const res = await fetch(`http://localhost:4000${endpoint}`, {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

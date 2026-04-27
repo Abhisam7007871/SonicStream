@@ -47,7 +47,7 @@ export default function SearchPage() {
   // Fetch logic
   useEffect(() => {
     setLoading(true);
-    const API_BASE = 'http://localhost:4000';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
     
     if (activeTab === 'Global (YouTube)') {
       const endpoint = `${API_BASE}/api/youtube/search?q=${encodeURIComponent(debouncedQuery || 'top music hits 2024')}&page=${page}&limit=${LIMIT}`;
@@ -106,7 +106,8 @@ export default function SearchPage() {
   const loadPodcastFeed = (feedUrl: string, showData: any) => {
     setLoading(true);
     setActiveShow(showData);
-    fetch(`http://localhost:4000/api/podcasts/feed?url=${encodeURIComponent(feedUrl)}`)
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    fetch(`${API_BASE}/api/podcasts/feed?url=${encodeURIComponent(feedUrl)}`)
       .then(r => r.json())
       .then(data => {
         setEpisodes(data.episodes || []);
