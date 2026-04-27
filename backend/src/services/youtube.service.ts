@@ -80,52 +80,51 @@ async function getAudioUrlViaYtDlp(videoId: string): Promise<string | null> {
  * Returns null if all methods fail.
  */
 export async function getInvidiousAudioUrl(videoId: string): Promise<string | null> {
-  // Return cached URL if still fresh
   const cached = streamCache.get(videoId);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    console.log(`[Stream] Cache hit for ${videoId}`);
-    return cached.url;
-  }
+  if (cached && Date.now() - cached.ts < CACHE_TTL) return cached.url;
 
   const save = (url: string) => {
     streamCache.set(videoId, { url, ts: Date.now() });
     return url;
   };
 
-  // ── 1. Piped API instances ─────────────────────────────────────────────
   const pipedInstances = [
     'https://pipedapi.adminforge.de',
     'https://pipedapi.astartes.nl',
     'https://pipedapi.lunar.icu',
     'https://pipedapi.kavin.rocks',
     'https://pipedapi.tokhmi.xyz',
-    'https://api.piped.yt',
     'https://pipedapi.mha.fi',
     'https://pipedapi.us.mha.fi',
+    'https://piped-api.garudalinux.org',
   ];
 
-  for (const piped of pipedInstances) {
+  // Race the first 4 instances for speed
+  const fetchAudio = async (baseUrl: string) => {
     try {
-      console.log(`[Piped] Trying ${piped} for ${videoId}`);
-      const res = await fetch(`${piped}/streams/${videoId}`, {
-        signal: AbortSignal.timeout(5000) as any,
+      const res = await fetch(`${baseUrl}/streams/${videoId}`, {
+        signal: AbortSignal.timeout(6000) as any,
         headers: { 'User-Agent': 'Mozilla/5.0' },
-      }).catch(() => null);
-
-      if (res && res.ok) {
+      });
+      if (res.ok) {
         const data = await res.json() as any;
         const stream = data.audioStreams?.find((s: any) => s.format === 'WEBM' || s.format === 'M4A');
-        if (stream?.url) {
-          console.log(`[Piped] ✓ Success via ${piped}`);
-          return save(stream.url);
-        }
+        if (stream?.url) return stream.url;
       }
-    } catch (e: any) {
-      // failover
-    }
-  }
+    } catch (e) {}
+    throw new Error('Failed');
+  };
 
-  // ── 2. Invidious instances ─────────────────────────────────────────────
+  try {
+    console.log(`[Stream] Racing Piped instances for ${videoId}...`);
+    const url = await Promise.any(pipedInstances.slice(0, 5).map(fetchAudio));
+    if (url) {
+      console.log(`[Stream] ✓ Piped Success`);
+      return save(url);
+    }
+  } catch (e) {}
+
+  // Fallback to Invidious (Sequential because they are slower)
   const invidiousInstances = [
     'https://invidious.privacydev.net',
     'https://yewtu.be',
@@ -133,53 +132,47 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
     'https://invidious.kavin.rocks',
     'https://iv.melmac.space',
     'https://invidious.drgns.space',
-    'https://invidious.tiekoetter.com',
   ];
 
   for (const instance of invidiousInstances) {
     try {
-      console.log(`[Invidious] Trying ${instance} for ${videoId}`);
+      console.log(`[Invidious] Trying ${instance}...`);
       const res = await fetch(`${instance}/api/v1/videos/${videoId}`, {
         signal: AbortSignal.timeout(5000) as any,
         headers: { 'User-Agent': 'Mozilla/5.0' },
-      }).catch(() => null);
-
-      if (res && res.ok) {
+      });
+      if (res.ok) {
         const data = await res.json() as any;
-        const audioStreams = [
-          ...(data.adaptiveFormats || []),
-          ...(data.formatStreams || []),
-        ].filter((f: any) => (f.type && f.type.startsWith('audio/')) || f.container === 'm4a');
-
-        if (audioStreams.length > 0) {
-          audioStreams.sort((a: any, b: any) => (parseInt(b.bitrate) || 0) - (parseInt(a.bitrate) || 0));
-          console.log(`[Invidious] ✓ Success via ${instance}`);
-          return save(audioStreams[0].url);
+        const streams = [...(data.adaptiveFormats || []), ...(data.formatStreams || [])];
+        const audio = streams.find((f: any) => (f.type && f.type.startsWith('audio/')) || f.container === 'm4a');
+        if (audio?.url) {
+          console.log(`[Invidious] ✓ Success`);
+          return save(audio.url);
         }
       }
-    } catch (e: any) {
-      // failover
-    }
+    } catch (e) {}
   }
 
-  // ── 3. Fallback to Local Libs (Likely blocked on Render) ──────────────
+  // LAST RESORT: play-dl (Wrapped to prevent FATAL unhandled rejections)
   try {
-    console.log(`[play-dl] Final fallback attempt for ${videoId}`);
-    const info = await play.video_info(`https://www.youtube.com/watch?v=${videoId}`).catch(() => null);
-    if (info) {
-      const audioFormats = (info.format || []).filter(f => 
-        f.mimeType?.includes('audio') || (f.mimeType?.includes('video/mp4') && f.audioQuality)
-      );
-      if (audioFormats.length > 0 && audioFormats[0].url) {
-        console.log('[play-dl] ✓ Success');
-        return save(audioFormats[0].url);
-      }
-    }
-  } catch (e: any) {
-    console.log(`[play-dl] Blocked: ${e.message}`);
-  }
+    console.log(`[play-dl] Final attempt for ${videoId}`);
+    const result = await new Promise<string | null>((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 8000);
+      play.video_info(`https://www.youtube.com/watch?v=${videoId}`)
+        .then(info => {
+          clearTimeout(timeout);
+          const audioFormats = (info.format || []).filter(f => f.mimeType?.includes('audio'));
+          resolve(audioFormats.length > 0 ? (audioFormats[0].url || null) : null);
+        })
+        .catch(() => {
+          clearTimeout(timeout);
+          resolve(null);
+        });
+    });
+    if (result) return save(result);
+  } catch (e) {}
 
-  console.error(`[Stream] ✗ All methods exhausted for ${videoId}`);
+  console.error(`[Stream] ✗ All YouTube methods exhausted for ${videoId}`);
   return null;
 }
 

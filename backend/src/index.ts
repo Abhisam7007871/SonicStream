@@ -197,11 +197,29 @@ app.get('/api/youtube/stream', async (req, res) => {
 
   console.log(`[Stream] Request for video: ${id}`);
   try {
-    const audioUrl = await getInvidiousAudioUrl(id);
+    let audioUrl = await getInvidiousAudioUrl(id);
+
+    // ── FALLBACK: If YouTube fails, search Audiomack for the same title ──
+    if (!audioUrl) {
+      console.log(`[Stream] YouTube extraction failed for ${id}. Trying Audiomack fallback...`);
+      try {
+        const { searchYouTube } = require('./services/youtube.service');
+        const ytResults = await searchYouTube(id, 1); // Try to get the title from the ID
+        const songTitle = ytResults[0]?.title || 'hit song';
+        
+        const amResults = await AudiomackService.search(songTitle, 1);
+        if (amResults.length > 0) {
+          console.log(`[Stream] ✓ Found Audiomack alternative: ${amResults[0].title}`);
+          audioUrl = amResults[0].streamUrl;
+        }
+      } catch (err) {
+        console.error('[Stream] Audiomack fallback failed:', err);
+      }
+    }
 
     if (!audioUrl) {
-      console.error(`[Stream] Could not resolve audio URL for ${id}`);
-      return res.status(503).send('Audio extraction failed. Try another track.');
+      console.error(`[Stream] ✗ All extraction methods failed for ${id}`);
+      return res.status(503).send('Could not find a working stream for this song. Please try another.');
     }
 
     // Forward Range header
