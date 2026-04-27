@@ -153,26 +153,37 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
     } catch (e) {}
   }
 
-  // LAST RESORT: play-dl (Wrapped to prevent FATAL unhandled rejections)
+  // ── 3. High-Quality Fallback: SoundCloud (Highly reliable on Render) ──
   try {
-    console.log(`[play-dl] Final attempt for ${videoId}`);
-    const result = await new Promise<string | null>((resolve) => {
-      const timeout = setTimeout(() => resolve(null), 8000);
-      play.video_info(`https://www.youtube.com/watch?v=${videoId}`)
-        .then(info => {
-          clearTimeout(timeout);
-          const audioFormats = (info.format || []).filter(f => f.mimeType?.includes('audio'));
-          resolve(audioFormats.length > 0 ? (audioFormats[0].url || null) : null);
-        })
-        .catch(() => {
-          clearTimeout(timeout);
-          resolve(null);
-        });
-    });
-    if (result) return save(result);
-  } catch (e) {}
+    console.log(`[Stream] YouTube extraction blocked. Searching SoundCloud fallback for ${videoId}...`);
+    
+    // Get the title first
+    const { searchYouTube } = require('./youtube.service');
+    const ytResults = await searchYouTube(videoId, 1).catch(() => []);
+    const songTitle = ytResults[0]?.title;
 
-  console.error(`[Stream] ✗ All YouTube methods exhausted for ${videoId}`);
+    if (songTitle) {
+      console.log(`[SoundCloud] Searching for: "${songTitle}"`);
+      const scID = await play.getFreeClientID().catch(() => null);
+      if (scID) {
+        await play.setToken({ soundcloud: { client_id: scID } });
+        const scResults = await play.search(songTitle, { source: { soundcloud: 'tracks' }, limit: 1 }).catch(() => []);
+        
+        if (scResults.length > 0) {
+          const scTrack = scResults[0];
+          console.log(`[SoundCloud] ✓ Found alternative: ${scTrack.name}`);
+          const scStream = await play.stream(scTrack.url).catch(() => null);
+          if (scStream?.url) {
+            return save(scStream.url);
+          }
+        }
+      }
+    }
+  } catch (e: any) {
+    console.log(`[SoundCloud] Fallback failed: ${e.message}`);
+  }
+
+  console.error(`[Stream] ✗ All YouTube & SoundCloud methods exhausted for ${videoId}`);
   return null;
 }
 

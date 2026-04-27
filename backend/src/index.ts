@@ -197,30 +197,13 @@ app.get('/api/youtube/stream', async (req, res) => {
 
   console.log(`[Stream] Request for video: ${id}`);
   try {
-    let audioUrl = await getInvidiousAudioUrl(id);
-
-    // ── FALLBACK: If YouTube fails, search all free sources (Archive, ccMixter, etc.) ──
-    if (!audioUrl) {
-      console.log(`[Stream] YouTube extraction failed for ${id}. Trying FreeMusic fallback...`);
-      try {
-        const { searchYouTube } = require('./services/youtube.service');
-        const ytResults = await searchYouTube(id, 1);
-        const songTitle = ytResults[0]?.title || 'hit song';
-        
-        const { searchAllSources } = require('./services/freeMusic.service');
-        const freeResults = await searchAllSources(songTitle, 1);
-        if (freeResults.length > 0) {
-          console.log(`[Stream] ✓ Found FreeMusic alternative: ${freeResults[0].title}`);
-          audioUrl = freeResults[0].streamUrl;
-        }
-      } catch (err) {
-        console.error('[Stream] Fallback search failed:', err);
-      }
-    }
+    const audioUrl = await getInvidiousAudioUrl(id);
 
     if (!audioUrl) {
       console.error(`[Stream] ✗ All extraction methods failed for ${id}`);
-      return res.status(503).send('Could not find a working stream for this song. Please try another.');
+      return res.status(503).json({ 
+        message: 'Could not find a working stream for this song. YouTube is currently blocking our server. Please try again in a few minutes or choose another track.' 
+      });
     }
 
     // Forward Range header
