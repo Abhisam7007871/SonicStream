@@ -119,6 +119,14 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
     'https://pipedapi.tokhmi.xyz',
     'https://pipedapi.moomoo.me',
     'https://api.piped.yt',
+    'https://pipedapi.adminforge.de',
+    'https://pipedapi.astartes.nl',
+    'https://pipedapi.lunar.icu',
+    'https://pipedapi.mha.fi',
+    'https://pipedapi.us.mha.fi',
+    'https://pipedapi.drgns.space',
+    'https://pipedapi.bahno.xyz',
+    'https://pipedapi.syncit.pw',
   ];
 
   for (const piped of pipedInstances) {
@@ -174,10 +182,17 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
   // ── 5. Invidious instances ─────────────────────────────────────────────
   const invidiousInstances = [
     'https://invidious.privacydev.net',
-    'https://inv.n8ms.pw',
-    'https://invidious.nerdvpn.de',
     'https://yewtu.be',
-    'https://inv.vern.cc',
+    'https://invidious.sethforprivacy.com',
+    'https://invidious.kavin.rocks',
+    'https://invidious.namazso.eu',
+    'https://inv.tux.pizza',
+    'https://invidious.flokinet.to',
+    'https://iv.melmac.space',
+    'https://invidious.drgns.space',
+    'https://invidious.tiekoetter.com',
+    'https://invidious.snopyta.org',
+    'https://inv.riverside.rocks',
   ];
 
   for (const instance of invidiousInstances) {
