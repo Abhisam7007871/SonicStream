@@ -3,6 +3,7 @@ import ytdl from '@distube/ytdl-core';
 import ytStream from 'yt-stream';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import play from 'play-dl';
 
 const execFileAsync = promisify(execFile);
 
@@ -94,6 +95,23 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
   // ── 1. yt-dlp (most reliable, handles bot-detection) ──────────────────
   const ytdlpUrl = await getAudioUrlViaYtDlp(videoId);
   if (ytdlpUrl) return save(ytdlpUrl);
+
+  // ── 1.5 play-dl (Very reliable Node.js fallback) ──────────────────────
+  try {
+    console.log(`[play-dl] Trying for ${videoId}`);
+    const info = await play.video_info(`https://www.youtube.com/watch?v=${videoId}`);
+    const audioFormats = (info.format || []).filter(f => 
+      f.mimeType?.includes('audio') || (f.mimeType?.includes('video/mp4') && f.audioQuality)
+    );
+    audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+    
+    if (audioFormats.length > 0 && audioFormats[0].url) {
+      console.log('[play-dl] ✓ Success');
+      return save(audioFormats[0].url);
+    }
+  } catch (e: any) {
+    console.log(`[play-dl] Failed: ${e.message}`);
+  }
 
   // ── 2. Piped API instances ─────────────────────────────────────────────
   const pipedInstances = [

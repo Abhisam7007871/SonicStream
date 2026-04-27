@@ -12,6 +12,7 @@ const ytdl_core_1 = __importDefault(require("@distube/ytdl-core"));
 const yt_stream_1 = __importDefault(require("yt-stream"));
 const child_process_1 = require("child_process");
 const util_1 = require("util");
+const play_dl_1 = __importDefault(require("play-dl"));
 const execFileAsync = (0, util_1.promisify)(child_process_1.execFile);
 // yt-dlp binary path (installed via pip)
 const YTDLP_PATH = 'C:\\Users\\20kaa\\AppData\\Roaming\\Python\\Python314\\Scripts\\yt-dlp.exe';
@@ -93,6 +94,20 @@ async function getInvidiousAudioUrl(videoId) {
     const ytdlpUrl = await getAudioUrlViaYtDlp(videoId);
     if (ytdlpUrl)
         return save(ytdlpUrl);
+    // ── 1.5 play-dl (Very reliable Node.js fallback) ──────────────────────
+    try {
+        console.log(`[play-dl] Trying for ${videoId}`);
+        const info = await play_dl_1.default.video_info(`https://www.youtube.com/watch?v=${videoId}`);
+        const audioFormats = (info.format || []).filter(f => f.mimeType?.includes('audio') || (f.mimeType?.includes('video/mp4') && f.audioQuality));
+        audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
+        if (audioFormats.length > 0 && audioFormats[0].url) {
+            console.log('[play-dl] ✓ Success');
+            return save(audioFormats[0].url);
+        }
+    }
+    catch (e) {
+        console.log(`[play-dl] Failed: ${e.message}`);
+    }
     // ── 2. Piped API instances ─────────────────────────────────────────────
     const pipedInstances = [
         'https://pipedapi.kavin.rocks',
