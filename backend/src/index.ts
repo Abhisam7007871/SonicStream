@@ -14,6 +14,16 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 4000;
 
+// Global error handlers to prevent silent crashes on Render
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err.message);
+  console.error(err.stack);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 const allowedOrigins = ['https://gamapa.onrender.com', 'https://gamapamusic-b6d6.onrender.com', 'http://localhost:3000'];
 
 app.use(cors({
