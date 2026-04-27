@@ -54,7 +54,7 @@ app.get('/api/music/search', async (req, res) => {
   }
 });
 
-import { searchYouTube } from './services/youtube.service';
+// Removed duplicate import
 
 // YouTube Direct Search
 app.get('/api/youtube/search', async (req, res) => {

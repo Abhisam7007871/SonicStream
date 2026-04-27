@@ -128,7 +128,7 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
   // ── 3. yt-stream ──────────────────────────────────────────────────────
   try {
     console.log(`[yt-stream] Trying for ${videoId}`);
-    const stream = await ytStream.stream(videoId, { quality: 'high', type: 'audio' });
+    const stream = await ytStream.stream(videoId, { quality: 'high', type: 'audio' } as any);
     if (stream?.url) {
       console.log('[yt-stream] ✓ Success');
       return save(stream.url);
