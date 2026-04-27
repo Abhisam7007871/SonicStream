@@ -16,7 +16,7 @@ export default function PlaylistPage() {
   const { playlists, likedSongs, removeTrackFromPlaylist, deletePlaylist, toggleLike, isLiked, renamePlaylist } = useLibraryStore();
   const { setCurrentTrack, isPlaying, currentTrack, setQueue } = usePlayerStore();
   const [mounted, setMounted] = useState(false);
-  
+
   const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editName, setEditName] = useState('');
@@ -82,7 +82,7 @@ export default function PlaylistPage() {
       </header>
 
       <div className={styles.controls}>
-        <button 
+        <button
           className={styles.playBtn}
           onClick={handlePlayAll}
           disabled={playlist.tracks.length === 0}
@@ -103,16 +103,16 @@ export default function PlaylistPage() {
       </div>
 
       {/* Rename Modal */}
-      <Modal 
-        isOpen={isRenameModalOpen} 
-        onClose={() => setIsRenameModalOpen(false)} 
+      <Modal
+        isOpen={isRenameModalOpen}
+        onClose={() => setIsRenameModalOpen(false)}
         title="Edit details"
       >
         <div className={styles.inputGroup}>
           <label>Name</label>
-          <input 
-            type="text" 
-            className={styles.input} 
+          <input
+            type="text"
+            className={styles.input}
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
             autoFocus
@@ -121,8 +121,8 @@ export default function PlaylistPage() {
         </div>
         <div className={styles.footer}>
           <button className={styles.cancelBtn} onClick={() => setIsRenameModalOpen(false)}>Cancel</button>
-          <button 
-            className={styles.confirmBtn} 
+          <button
+            className={styles.confirmBtn}
             onClick={handleRename}
             disabled={!editName.trim() || editName.trim() === playlist.name}
           >
@@ -132,19 +132,19 @@ export default function PlaylistPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal 
-        isOpen={isDeleteModalOpen} 
-        onClose={() => setIsDeleteModalOpen(false)} 
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
         title="Delete Playlist"
       >
         <p className={styles.description}>
-          This will delete <strong>{playlist.name}</strong> from your library. 
+          This will delete <strong>{playlist.name}</strong> from your library.
           This action cannot be undone.
         </p>
         <div className={styles.footer}>
           <button className={styles.cancelBtn} onClick={() => setIsDeleteModalOpen(false)}>Cancel</button>
-          <button 
-            className={`${styles.confirmBtn} ${styles.confirmBtnDanger}`} 
+          <button
+            className={`${styles.confirmBtn} ${styles.confirmBtnDanger}`}
             onClick={handleDelete}
           >
             Delete
@@ -156,7 +156,7 @@ export default function PlaylistPage() {
         <div className={styles.tableHeader}>
           <span className={styles.colNum}>#</span>
           <span className={styles.colTitle}>Title</span>
-          <span className={styles.colAlbum}>Source</span>
+          {/* <span className={styles.colAlbum}>Source</span> */}
           <span className={styles.colDate}>Action</span>
         </div>
 
@@ -186,7 +186,7 @@ export default function PlaylistPage() {
                   <span className={styles.trackArtist}>{track.artist}</span>
                 </div>
               </div>
-              <span className={styles.colAlbum}>{track.source || 'Unknown'}</span>
+              {/* <span className={styles.colAlbum}>{track.source || 'Unknown'}</span> */}
               <div className={styles.colDate}>
                 <button
                   className={styles.rowBtn}

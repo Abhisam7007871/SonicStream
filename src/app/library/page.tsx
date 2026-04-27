@@ -7,6 +7,7 @@ import { Heart, Play, Plus, Music } from 'lucide-react';
 import Link from 'next/link';
 
 import Modal from '@/components/Modal';
+import { useState } from 'react';
 
 export default function LibraryPage() {
   const { playlists, likedSongs, createPlaylist } = useLibraryStore();
@@ -40,16 +41,16 @@ export default function LibraryPage() {
       </header>
 
       {/* Create Playlist Modal */}
-      <Modal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
         title="Create Playlist"
       >
         <div className={styles.inputGroup}>
           <label>Playlist Name</label>
-          <input 
-            type="text" 
-            className={styles.input} 
+          <input
+            type="text"
+            className={styles.input}
             placeholder="My Awesome Playlist"
             value={newPlaylistName}
             onChange={(e) => setNewPlaylistName(e.target.value)}
@@ -59,8 +60,8 @@ export default function LibraryPage() {
         </div>
         <div className={styles.footer}>
           <button className={styles.cancelBtn} onClick={() => setIsCreateModalOpen(false)}>Cancel</button>
-          <button 
-            className={styles.confirmBtn} 
+          <button
+            className={styles.confirmBtn}
             onClick={handleCreatePlaylist}
             disabled={!newPlaylistName.trim()}
           >
@@ -84,7 +85,7 @@ export default function LibraryPage() {
                   <p className={styles.likedCount}>{likedSongs.length} songs</p>
                 </div>
               </div>
-              <button 
+              <button
                 className={styles.playBtn}
                 onClick={(e) => {
                   e.preventDefault();
@@ -123,7 +124,7 @@ export default function LibraryPage() {
                 </div>
               </Link>
             ))}
-            
+
             <div className={styles.addCard} onClick={handleCreatePlaylist}>
               <div className={styles.addIcon}>
                 <Plus size={40} />
