@@ -199,21 +199,22 @@ app.get('/api/youtube/stream', async (req, res) => {
   try {
     let audioUrl = await getInvidiousAudioUrl(id);
 
-    // ── FALLBACK: If YouTube fails, search Audiomack for the same title ──
+    // ── FALLBACK: If YouTube fails, search all free sources (Archive, ccMixter, etc.) ──
     if (!audioUrl) {
-      console.log(`[Stream] YouTube extraction failed for ${id}. Trying Audiomack fallback...`);
+      console.log(`[Stream] YouTube extraction failed for ${id}. Trying FreeMusic fallback...`);
       try {
         const { searchYouTube } = require('./services/youtube.service');
-        const ytResults = await searchYouTube(id, 1); // Try to get the title from the ID
+        const ytResults = await searchYouTube(id, 1);
         const songTitle = ytResults[0]?.title || 'hit song';
         
-        const amResults = await AudiomackService.search(songTitle, 1);
-        if (amResults.length > 0) {
-          console.log(`[Stream] ✓ Found Audiomack alternative: ${amResults[0].title}`);
-          audioUrl = amResults[0].streamUrl;
+        const { searchAllSources } = require('./services/freeMusic.service');
+        const freeResults = await searchAllSources(songTitle, 1);
+        if (freeResults.length > 0) {
+          console.log(`[Stream] ✓ Found FreeMusic alternative: ${freeResults[0].title}`);
+          audioUrl = freeResults[0].streamUrl;
         }
       } catch (err) {
-        console.error('[Stream] Audiomack fallback failed:', err);
+        console.error('[Stream] Fallback search failed:', err);
       }
     }
 
