@@ -5,7 +5,7 @@ import { Home, Search, Library, PlusSquare, Heart, Music2, Mic2 } from 'lucide-r
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { useLibraryStore } from '@/store/useLibraryStore';
+import { useHydratedLibraryStore as useLibraryStore } from '@/store/useLibraryStore';
 
 export default function Sidebar() {
   const pathname = usePathname();

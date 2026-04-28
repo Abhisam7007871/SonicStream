@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useEffect, useState } from 'react';
 
 export interface Track {
   id: string;
@@ -109,6 +110,32 @@ export const useLibraryStore = create<LibraryState>()(
     }),
     {
       name: 'gamapa-library-storage',
+      skipHydration: true,
     }
   )
 );
+
+/**
+ * Hook to safely use the library store with SSR/hydration support.
+ * Prevents the infinite re-render loop caused by persist + Next.js SSR mismatch.
+ */
+export function useHydratedLibraryStore() {
+  const [hydrated, setHydrated] = useState(false);
+  const store = useLibraryStore();
+
+  useEffect(() => {
+    // Manually trigger hydration after client mount
+    useLibraryStore.persist.rehydrate();
+    setHydrated(true);
+  }, []);
+
+  return {
+    ...store,
+    // Return safe defaults before hydration
+    likedSongs: hydrated ? store.likedSongs : [],
+    playlists: hydrated ? store.playlists : [],
+    isLiked: hydrated ? store.isLiked : () => false,
+    isInLibrary: hydrated ? store.isInLibrary : () => false,
+    hydrated,
+  };
+}

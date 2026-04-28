@@ -1,6 +1,6 @@
 "use client";
 
-import { useLibraryStore } from '@/store/useLibraryStore';
+import { useHydratedLibraryStore as useLibraryStore } from '@/store/useLibraryStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import styles from './page.module.css';
 import { Heart, Play, Plus, Music } from 'lucide-react';

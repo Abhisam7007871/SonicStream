@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import styles from './TrackOptionsMenu.module.css';
 import { Plus, ListMusic, Heart, Check, Trash2, MinusCircle } from 'lucide-react';
-import { useLibraryStore, Track } from '@/store/useLibraryStore';
+import { useHydratedLibraryStore as useLibraryStore, Track } from '@/store/useLibraryStore';
 
 interface TrackOptionsMenuProps {
   track: Track;

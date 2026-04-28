@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import { useSearchStore } from '@/store/useSearchStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
-import { useLibraryStore } from '@/store/useLibraryStore';
+import { useHydratedLibraryStore as useLibraryStore } from '@/store/useLibraryStore';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import TrackOptionsMenu from '@/components/TrackOptionsMenu';
 
@@ -80,7 +80,8 @@ export default function SearchPage() {
           setResults(data.results || []); 
           setTotal(data.total || 0);
           setLoading(false); 
-        });
+        })
+        .catch(() => { setResults([]); setLoading(false); });
     } 
     else if (activeTab === 'Regional Classics') {
       const endpoint = debouncedQuery.trim()
@@ -93,7 +94,8 @@ export default function SearchPage() {
           setResults(data.tracks || []); 
           setTotal(data.total || data.tracks?.length || 0);
           setLoading(false); 
-        });
+        })
+        .catch(() => { setResults([]); setLoading(false); });
     }
     else if (activeTab === 'Open Library') {
       const endpoint = `${API_BASE}/api/music/free-search?q=${encodeURIComponent(debouncedQuery || 'remix instrumental')}&page=${page}&limit=${LIMIT}`;
@@ -103,7 +105,8 @@ export default function SearchPage() {
           setResults(data.results || []); 
           setTotal(data.total || 0);
           setLoading(false); 
-        });
+        })
+        .catch(() => { setResults([]); setLoading(false); });
     }
     else if (activeTab === 'Podcasts') {
       fetch(`${API_BASE}/api/podcasts/indian`)
@@ -111,7 +114,8 @@ export default function SearchPage() {
         .then(data => { 
           setShows(data.shows || []); 
           setLoading(false); 
-        });
+        })
+        .catch(() => { setShows([]); setLoading(false); });
     }
   }, [debouncedQuery, activeTab, page]);
 
