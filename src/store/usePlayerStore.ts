@@ -120,15 +120,64 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   addToQueue: (track) => set((s) => ({ queue: [...s.queue, track] })),
   setQueue: (tracks) => set({ queue: tracks }),
 
-  playNext: () => {
+  playNext: async () => {
     const { queue, currentTrack, isShuffle, isRepeat } = get();
-    if (queue.length === 0) return;
+    
+    if (queue.length === 0 && currentTrack) {
+      // Queue is empty — auto-fetch similar songs from same artist
+      try {
+        const artistQuery = currentTrack.artist && currentTrack.artist !== 'Unknown Artist'
+          ? `${currentTrack.artist} songs`
+          : `${currentTrack.title} similar`;
+        const res = await fetch(`${API_BASE}/api/youtube/search?q=${encodeURIComponent(artistQuery)}&limit=30`);
+        const data = await res.json();
+        const newTracks = (data.results || []).filter((t: Track) => t.id !== currentTrack.id);
+        if (newTracks.length > 0) {
+          set({ queue: newTracks, isShuffle: true });
+          // Pick a random track from the new queue
+          const randomIdx = Math.floor(Math.random() * newTracks.length);
+          get().setCurrentTrack(newTracks[randomIdx]);
+          return;
+        }
+      } catch (e) {
+        console.error('[AutoPlay] Failed to fetch similar songs:', e);
+      }
+      return;
+    }
 
     let nextIndex = 0;
     if (currentTrack) {
       const currentIndex = queue.findIndex(t => t.id === currentTrack.id);
+      
+      // If we're at the end of queue and not repeating, auto-fetch more
+      if (!isShuffle && currentIndex >= queue.length - 1 && !isRepeat) {
+        try {
+          const artistQuery = currentTrack.artist && currentTrack.artist !== 'Unknown Artist'
+            ? `${currentTrack.artist} songs`
+            : `${currentTrack.title} similar`;
+          const res = await fetch(`${API_BASE}/api/youtube/search?q=${encodeURIComponent(artistQuery)}&limit=20`);
+          const data = await res.json();
+          const newTracks = (data.results || []).filter((t: Track) => 
+            !queue.some(q => q.id === t.id)
+          );
+          if (newTracks.length > 0) {
+            const extendedQueue = [...queue, ...newTracks];
+            set({ queue: extendedQueue, isShuffle: true });
+            const randomIdx = Math.floor(Math.random() * newTracks.length);
+            get().setCurrentTrack(newTracks[randomIdx]);
+            return;
+          }
+        } catch (e) {
+          console.error('[AutoPlay] Failed to extend queue:', e);
+        }
+      }
+      
       if (isShuffle) {
-        nextIndex = Math.floor(Math.random() * queue.length);
+        // Avoid replaying current track when shuffling
+        const otherIndices = queue.map((_, i) => i).filter(i => i !== currentIndex);
+        nextIndex = otherIndices.length > 0 
+          ? otherIndices[Math.floor(Math.random() * otherIndices.length)]
+          : 0;
       } else {
         nextIndex = (currentIndex + 1) % queue.length;
       }
