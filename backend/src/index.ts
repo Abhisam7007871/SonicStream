@@ -71,10 +71,11 @@ app.get('/api/music/search', async (req, res) => {
 
 // YouTube Direct Search
 app.get('/api/youtube/search', async (req, res) => {
-  const { q } = req.query as { q?: string };
+  const { q, limit } = req.query as { q?: string; limit?: string };
   const term = q || 'top hits 2024';
+  const numLimit = Math.min(Number(limit) || 50, 100);
   try {
-    const results = await searchYouTube(term, 30);
+    const results = await searchYouTube(term, numLimit);
     res.json({ query: term, total: results.length, results });
   } catch (err: any) {
     console.error('YouTube Search error:', err.message);
@@ -94,13 +95,24 @@ app.get('/api/music/language/:lang', async (req, res) => {
   try {
     // Fetch from first 2 search terms via YouTube and merge results
     const [a, b] = await Promise.all([
-      searchYouTube(terms[0] as string, 15),
-      searchYouTube(terms[1] as string, 15),
+      searchYouTube(terms[0] as string, 15).catch(() => []),
+      searchYouTube(terms[1] as string, 15).catch(() => []),
     ]);
-    const all = [...a, ...b];
+    let all = [...a, ...b];
+    
+    // Fallback to iTunes if YouTube returns nothing
+    if (all.length === 0) {
+      console.log(`[Language] YouTube returned 0 for ${lang}, falling back to iTunes`);
+      const [ia, ib] = await Promise.all([
+        searchItunes(terms[0] as string, 15).catch(() => []),
+        searchItunes(terms[1] as string, 15).catch(() => []),
+      ]);
+      all = [...ia, ...ib];
+    }
+    
     // Remove duplicates
     const seen = new Set<string>();
-    const results = all.filter(t => {
+    const results = all.filter((t: any) => {
       if (seen.has(t.id)) return false;
       seen.add(t.id);
       return true;
@@ -111,18 +123,32 @@ app.get('/api/music/language/:lang', async (req, res) => {
   }
 });
 
-// Trending — uses YouTube for FULL songs (not 30s iTunes previews)
+// Trending — uses YouTube for FULL songs, falls back to iTunes if YT fails
 app.get('/api/music/trending', async (req, res) => {
   try {
     const [hindi, punjabi, korean, english] = await Promise.all([
-      searchYouTube('hindi hits 2024', 8),
-      searchYouTube('punjabi hits 2024', 8),
-      searchYouTube('kpop 2024', 8),
-      searchYouTube('pop hits 2024', 8),
+      searchYouTube('hindi hits 2024', 8).catch(() => []),
+      searchYouTube('punjabi hits 2024', 8).catch(() => []),
+      searchYouTube('kpop 2024', 8).catch(() => []),
+      searchYouTube('pop hits 2024', 8).catch(() => []),
     ]);
-    const results = [...hindi, ...punjabi, ...korean, ...english];
+    let results = [...hindi, ...punjabi, ...korean, ...english];
+    
+    // Fallback to iTunes if YouTube returns nothing
+    if (results.length === 0) {
+      console.log('[Trending] YouTube returned 0 results, falling back to iTunes');
+      const [h, p, k, e] = await Promise.all([
+        searchItunes('hindi hits 2024', 8).catch(() => []),
+        searchItunes('punjabi hits 2024', 8).catch(() => []),
+        searchItunes('kpop 2024', 8).catch(() => []),
+        searchItunes('pop hits 2024', 8).catch(() => []),
+      ]);
+      results = [...h, ...p, ...k, ...e];
+    }
+    
     res.json({ total: results.length, results });
   } catch (err: any) {
+    console.error('Trending error:', err.message);
     res.status(500).json({ message: err.message });
   }
 });
@@ -176,6 +202,7 @@ app.get('/api/music/stream', async (req, res) => {
     if (!videoId) return res.status(404).send('YouTube stream not found');
     
     const audioUrl = await getInvidiousAudioUrl(videoId);
+    if (!audioUrl) return res.status(404).send('Audio URL not found');
     res.redirect(audioUrl);
   } catch (err) {
     console.error('Stream proxy error:', err);

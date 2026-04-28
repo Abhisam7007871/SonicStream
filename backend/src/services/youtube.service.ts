@@ -301,27 +301,41 @@ export async function searchYouTube(query: string, limit: number = 50) {
     // Add "song" or "audio" to query to bias toward music
     const musicQuery = query.match(/(song|audio|lyrics|music)/i) ? query : `${query} songs`;
     
-    // Search with multiple queries to get more results
-    const searches = [
-      yts(musicQuery),
-      yts(`${query} music`),
-    ];
+    console.log(`[YT Search] Searching: "${musicQuery}" (limit: ${limit})`);
     
-    const results = await Promise.allSettled(searches);
-    const allVideos: any[] = [];
+    // Primary search
+    let allVideos: any[] = [];
     const seenIds = new Set<string>();
-    
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        for (const v of result.value.videos) {
+
+    try {
+      const r1 = await yts(musicQuery);
+      for (const v of (r1.videos || [])) {
+        if (!seenIds.has(v.videoId)) {
+          seenIds.add(v.videoId);
+          allVideos.push(v);
+        }
+      }
+      console.log(`[YT Search] Primary: ${allVideos.length} results`);
+    } catch (e: any) {
+      console.error(`[YT Search] Primary search failed: ${e.message}`);
+    }
+
+    // Secondary search for more results (only if we need more)
+    if (allVideos.length < limit) {
+      try {
+        const r2 = await yts(`${query} music`);
+        for (const v of (r2.videos || [])) {
           if (!seenIds.has(v.videoId)) {
             seenIds.add(v.videoId);
             allVideos.push(v);
           }
         }
+        console.log(`[YT Search] After secondary: ${allVideos.length} results`);
+      } catch (e: any) {
+        console.error(`[YT Search] Secondary search failed: ${e.message}`);
       }
     }
-    
+
     let videos = allVideos;
 
     // Filter out non-music content (compilations, podcasts, very long videos)
