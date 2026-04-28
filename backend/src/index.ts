@@ -73,7 +73,8 @@ function setCache(key: string, data: any): void {
   }
 }
 
-// Helper: race YouTube search against a timeout, fallback to iTunes
+// Helper: YouTube search with cache. No timeout — let yt-search take as long as needed.
+// iTunes fallback only if YouTube completely fails (error, not slow).
 async function fastYouTubeSearch(query: string, limit: number): Promise<any[]> {
   const cacheKey = `yt:${query}:${limit}`;
   const cached = getCached(cacheKey);
@@ -82,27 +83,25 @@ async function fastYouTubeSearch(query: string, limit: number): Promise<any[]> {
     return cached;
   }
 
+  // Try YouTube first (no timeout — let it work)
   try {
-    // 8 second timeout for YouTube search
-    const results = await Promise.race([
-      searchYouTube(query, limit),
-      new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('YT timeout')), 8000)),
-    ]);
+    console.log(`[Search] YouTube: "${query}" (limit ${limit})`);
+    const results = await searchYouTube(query, limit);
     if (results.length > 0) {
       setCache(cacheKey, results);
+      console.log(`[Search] YouTube: ${results.length} results for "${query}"`);
       return results;
     }
+    console.log(`[Search] YouTube returned 0 results for "${query}"`);
   } catch (e: any) {
-    console.log(`[FastSearch] YouTube failed for "${query}": ${e.message}`);
+    console.error(`[Search] YouTube error for "${query}": ${e.message}`);
   }
 
-  // Fallback to iTunes
-  console.log(`[FastSearch] Falling back to iTunes for "${query}"`);
+  // Only fall back to iTunes if YouTube returned 0 or errored
+  console.log(`[Search] Falling back to iTunes for "${query}"`);
   try {
     const itunesResults = await searchItunes(query, limit);
-    if (itunesResults.length > 0) {
-      setCache(cacheKey, itunesResults);
-    }
+    // Don't cache iTunes results (we want YouTube next time)
     return itunesResults;
   } catch {
     return [];
