@@ -161,9 +161,19 @@ export default function Player() {
         />
       )}
 
-      {/* ReactPlayer for YouTube — hidden (audio only, no video visible) */}
+      {/* ReactPlayer for YouTube — small thumbnail in corner */}
       {isYT && (
-        <div style={{ position: 'fixed', top: -9999, left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
+        <div style={{ 
+          position: 'fixed', 
+          bottom: 90, 
+          right: 16, 
+          width: 200, 
+          height: 113, 
+          borderRadius: 8, 
+          overflow: 'hidden', 
+          zIndex: 9999,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+        }}>
           <ReactPlayer
             ref={reactPlayerRef}
             url={trackUrl}
@@ -176,8 +186,8 @@ export default function Player() {
             onBuffer={() => setIsLoading(true)}
             onBufferEnd={() => setIsLoading(false)}
             onReady={() => { setIsLoading(false); setError(null); }}
-            width={1}
-            height={1}
+            width="100%"
+            height="100%"
             config={{
               youtube: {
                 embedOptions: {

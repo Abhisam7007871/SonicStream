@@ -53,27 +53,16 @@ export default function SearchPage() {
       setLoading(true);
       const searchQuery = debouncedQuery.trim() || 'top hits 2024';
       
-      // Search YouTube (mainstream) + Jamendo (indie) in parallel
-      const ytPromise = fetch(
+      // YouTube is primary (fast, mainstream catalog)
+      fetch(
         `${API_BASE}/api/youtube/search?q=${encodeURIComponent(searchQuery)}&limit=${LIMIT}`,
         { signal: controller.signal }
-      ).then(r => r.json()).catch(() => ({ results: [] }));
-
-      const jamendoPromise = fetch(
-        `${API_BASE}/api/jamendo/search?q=${encodeURIComponent(searchQuery)}&limit=10&offset=0`,
-        { signal: controller.signal }
-      ).then(r => r.json()).catch(() => ({ results: [] }));
-
-      Promise.all([ytPromise, jamendoPromise])
-        .then(([ytData, jamData]) => {
-          // YouTube results first (mainstream), then Jamendo (indie/free)
-          const ytResults = (ytData.results || []).map((r: any) => ({ ...r, source: r.source || 'youtube' }));
-          const jamResults = (jamData.results || []).map((r: any) => ({ ...r, source: 'jamendo' }));
-          
-          // Merge: YouTube on top (mainstream), Jamendo at bottom
-          const merged = [...ytResults, ...jamResults];
-          setResults(merged);
-          setTotal(merged.length);
+      )
+        .then(r => r.json())
+        .then(data => {
+          const ytResults = (data.results || []).map((r: any) => ({ ...r, source: r.source || 'youtube' }));
+          setResults(ytResults);
+          setTotal(ytResults.length);
           setLoading(false);
         })
         .catch((err) => {
