@@ -313,12 +313,147 @@
   100% { background-position: -200% 0; }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .hero {
-    padding: 40px;
-    min-height: 400px;
+    padding: 48px;
+    min-height: 360px;
   }
   .heroTitle {
-    font-size: 48px;
+    font-size: 52px;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  .trackCard {
+    width: 180px;
+    padding: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .home {
+    gap: 40px;
+  }
+  .hero {
+    padding: 32px;
+    min-height: 300px;
+    border-radius: 20px;
+  }
+  .heroTitle {
+    font-size: 36px;
+    letter-spacing: -1.5px;
+  }
+  .heroDescription {
+    font-size: 15px;
+    margin-bottom: 24px;
+  }
+  .heroActions {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .primaryButton, .secondaryButton {
+    padding: 14px 28px;
+    border-radius: 12px;
+    font-size: 14px;
+    width: 100%;
+    justify-content: center;
+  }
+  .sectionTitle {
+    font-size: 22px;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .playlistCard {
+    height: 80px;
+    border-radius: 12px;
+  }
+  .cardGradient {
+    width: 80px;
+    height: 80px;
+  }
+  .cardTitle {
+    font-size: 15px;
+    padding-left: 14px;
+  }
+  .horizontalScroll {
+    gap: 16px;
+    padding: 8px 4px 16px;
+  }
+  .trackCard {
+    width: 160px;
+    padding: 14px;
+    border-radius: 16px;
+  }
+  .trackName {
+    font-size: 14px;
+  }
+  .trackArtist {
+    font-size: 12px;
+  }
+  .section {
+    gap: 20px;
+  }
+  .sectionHeader {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .home {
+    gap: 32px;
+  }
+  .hero {
+    padding: 24px;
+    min-height: 240px;
+    border-radius: 16px;
+  }
+  .heroTitle {
+    font-size: 28px;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+  .heroDescription {
+    font-size: 13px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 6px 14px;
+    margin-bottom: 16px;
+  }
+  .primaryButton, .secondaryButton {
+    padding: 12px 20px;
+    font-size: 13px;
+  }
+  .sectionTitle {
+    font-size: 18px;
+    gap: 10px;
+  }
+  .grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .trackCard {
+    width: 140px;
+    padding: 12px;
+    border-radius: 12px;
+  }
+  .trackArtWrapper {
+    border-radius: 12px;
+    margin-bottom: 12px;
+  }
+  .trackName {
+    font-size: 13px;
+  }
+  .trackArtist {
+    font-size: 11px;
+  }
+  .seeAll {
+    font-size: 12px;
+    padding: 6px 14px;
   }
 }

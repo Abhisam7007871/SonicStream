@@ -120,13 +120,55 @@
 
 @media (max-width: 768px) {
   .navbar {
-    padding: 0 16px;
+    padding: 0 12px;
+    height: 60px;
   }
   .searchContainer {
     max-width: none;
-    margin: 0 12px;
+    margin: 0 8px;
+  }
+  .searchInput {
+    height: 40px;
+    font-size: 14px;
+    padding: 0 16px 0 44px;
+  }
+  .searchIcon {
+    left: 14px;
   }
   .navigation {
     display: none;
+  }
+  .actions {
+    gap: 8px;
+  }
+  .actionButton {
+    width: 36px;
+    height: 36px;
+  }
+  .profileButton {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0 8px;
+    height: 56px;
+  }
+  .searchInput {
+    height: 36px;
+    font-size: 13px;
+  }
+  .actions {
+    gap: 4px;
+  }
+  .actionButton {
+    width: 32px;
+    height: 32px;
+  }
+  .profileButton {
+    width: 32px;
+    height: 32px;
   }
 }

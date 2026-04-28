@@ -347,3 +347,82 @@
   background: rgba(255, 255, 255, 0.05);
   border-color: white;
 }
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .searchPage {
+    gap: 20px;
+  }
+  .title, .sectionTitle {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .resultsGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .topTitle {
+    font-size: 1.4rem;
+  }
+  .songRow {
+    padding: 8px 8px;
+  }
+  .songName {
+    font-size: 0.85rem;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .songArtist {
+    font-size: 0.72rem;
+  }
+  .genrePills {
+    gap: 6px;
+  }
+  .genrePill {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+  }
+  .categoryTitle {
+    font-size: 1rem;
+  }
+  .pagination {
+    gap: 12px;
+  }
+  .pageBtn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .searchPage {
+    gap: 16px;
+  }
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .songMain {
+    gap: 8px;
+  }
+  .songArt {
+    width: 36px;
+    height: 36px;
+  }
+  .songName {
+    max-width: 160px;
+    font-size: 0.8rem;
+  }
+  .categoryCard {
+    padding: 12px;
+  }
+  .categoryTitle {
+    font-size: 0.9rem;
+  }
+}

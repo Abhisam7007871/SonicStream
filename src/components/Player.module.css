@@ -287,16 +287,65 @@
 @media (max-width: 768px) {
   .player {
     grid-template-columns: 1fr auto;
-    height: 80px;
+    height: 72px;
+    padding: 0 12px;
+    bottom: 64px;
   }
-  .extraControls, .progressContainer {
+  .extraControls {
+    display: none;
+  }
+  .controlsContainer {
+    gap: 4px;
+  }
+  .mainControls {
+    gap: 12px;
+  }
+  .progressContainer {
     display: none;
   }
   .trackInfo {
-    gap: 12px;
+    gap: 10px;
   }
   .albumArt {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+  }
+  .title {
+    font-size: 13px;
+  }
+  .artist {
+    font-size: 11px;
+  }
+  .playBtn {
+    width: 36px;
+    height: 36px;
+  }
+  .iconBtn {
+    padding: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .player {
+    height: 64px;
+    padding: 0 8px;
+    bottom: 64px;
+  }
+  .mainControls {
+    gap: 8px;
+  }
+  .albumArt {
+    width: 40px;
+    height: 40px;
+  }
+  .details {
+    max-width: 140px;
+  }
+  .title {
+    font-size: 12px;
+  }
+  .artist {
+    font-size: 10px;
   }
 }
