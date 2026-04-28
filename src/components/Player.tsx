@@ -259,20 +259,17 @@ export default function Player() {
         />
       )}
 
-      {/* YouTube Player - visible mini player when active, hidden when not */}
+      {/* YouTube Player - hidden behind player bar (1x1px, not display:none so YT still plays) */}
       <div style={{ 
         position: 'fixed', 
-        bottom: 90, 
-        right: 16, 
-        width: isYT ? 320 : 1,
-        height: isYT ? 180 : 1,
-        borderRadius: 8,
+        bottom: 0, 
+        right: 0, 
+        width: 1,
+        height: 1,
         overflow: 'hidden',
-        zIndex: 9999,
-        boxShadow: isYT ? '0 4px 20px rgba(0,0,0,0.6)' : 'none',
-        opacity: isYT ? 1 : 0,
-        pointerEvents: isYT ? 'auto' : 'none',
-        transition: 'opacity 0.3s',
+        opacity: 0.01,
+        pointerEvents: 'none',
+        zIndex: -1,
       }}>
         <div id="yt-player-container" ref={ytContainerRef} />
       </div>
