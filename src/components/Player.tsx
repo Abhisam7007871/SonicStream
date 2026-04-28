@@ -161,46 +161,47 @@ export default function Player() {
         />
       )}
 
-      {/* ReactPlayer for YouTube — small thumbnail in corner */}
-      {isYT && (
-        <div style={{ 
-          position: 'fixed', 
-          bottom: 90, 
-          right: 16, 
-          width: 200, 
-          height: 113, 
-          borderRadius: 8, 
-          overflow: 'hidden', 
-          zIndex: 9999,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-        }}>
-          <ReactPlayer
-            ref={reactPlayerRef}
-            url={trackUrl}
-            playing={isPlaying}
-            volume={volume}
-            onProgress={handleYTProgress as any}
-            onDuration={handleYTDuration as any}
-            onEnded={handleEnded}
-            onError={handleYTError as any}
-            onBuffer={() => setIsLoading(true)}
-            onBufferEnd={() => setIsLoading(false)}
-            onReady={() => { setIsLoading(false); setError(null); }}
-            width="100%"
-            height="100%"
-            config={{
-              youtube: {
-                embedOptions: {
-                  autoplay: 1,
-                  controls: 0,
-                  modestbranding: 1,
-                  rel: 0,
-                },
+      {/* ReactPlayer for YouTube — always mounted, shown as mini player when active */}
+      <div style={{ 
+        position: 'fixed', 
+        bottom: 90, 
+        right: 16, 
+        width: isYT ? 320 : 0, 
+        height: isYT ? 180 : 0, 
+        borderRadius: 8, 
+        overflow: 'hidden', 
+        zIndex: 9999,
+        boxShadow: isYT ? '0 4px 20px rgba(0,0,0,0.5)' : 'none',
+        transition: 'all 0.3s ease',
+        opacity: isYT ? 1 : 0,
+        pointerEvents: isYT ? 'auto' : 'none',
+      }}>
+        <ReactPlayer
+          ref={reactPlayerRef}
+          url={isYT ? trackUrl : ''}
+          playing={isYT && isPlaying}
+          volume={volume}
+          onProgress={handleYTProgress as any}
+          onDuration={handleYTDuration as any}
+          onEnded={handleEnded}
+          onError={handleYTError as any}
+          onBuffer={() => setIsLoading(true)}
+          onBufferEnd={() => setIsLoading(false)}
+          onReady={() => { setIsLoading(false); setError(null); }}
+          width="100%"
+          height="100%"
+          config={{
+            youtube: {
+              embedOptions: {
+                autoplay: 1,
+                controls: 0,
+                modestbranding: 1,
+                rel: 0,
               },
-            } as any}
-          />
-        </div>
-      )}
+            },
+          } as any}
+        />
+      </div>
 
       <footer
         className={styles.player}

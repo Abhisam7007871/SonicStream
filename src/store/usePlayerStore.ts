@@ -97,16 +97,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
     set({
       currentTrack: { ...track, albumArt, url: streamUrl },
-      isPlaying: false, 
+      isPlaying: true, 
       progress: 0,
       duration: 0,
       audiomackUrl: track.source === 'audiomack' ? track.url : null,
     });
-
-    // Short delay to ensure ReactPlayer receives the URL before playing
-    setTimeout(() => {
-      set({ isPlaying: true });
-    }, 300);
   },
 
   setAudiomackUrl: (url) => set({ audiomackUrl: url }),
