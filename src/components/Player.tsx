@@ -66,7 +66,7 @@ export default function Player() {
     if (typeof window === 'undefined') return;
     
     loadYouTubeApi().then(() => {
-      if (ytPlayerRef.current) return; // Already initialized
+      if (ytPlayerRef.current) return;
       
       ytPlayerRef.current = new (window as any).YT.Player('yt-player-container', {
         height: '180',
@@ -91,7 +91,6 @@ export default function Player() {
             if (state === YT.PLAYING) {
               setIsLoading(false);
               setError(null);
-              // Get duration
               const dur = ytPlayerRef.current?.getDuration?.();
               if (dur) setDuration(dur);
             } else if (state === YT.BUFFERING) {
@@ -122,11 +121,9 @@ export default function Player() {
   // ── Load YouTube video when track changes ────────────────────────────
   useEffect(() => {
     if (!isYT || !ytReady || !ytPlayerRef.current) return;
-    
     console.log('[YT] Loading video:', ytVideoId);
     setIsLoading(true);
     setError(null);
-    
     try {
       ytPlayerRef.current.loadVideoById(ytVideoId);
     } catch (e) {
@@ -137,7 +134,6 @@ export default function Player() {
   // ── Sync play/pause to YouTube ───────────────────────────────────────
   useEffect(() => {
     if (!isYT || !ytReady || !ytPlayerRef.current) return;
-    
     try {
       if (isPlaying) {
         ytPlayerRef.current.playVideo();
@@ -150,9 +146,7 @@ export default function Player() {
   // ── Sync volume to YouTube ───────────────────────────────────────────
   useEffect(() => {
     if (!isYT || !ytReady || !ytPlayerRef.current) return;
-    try {
-      ytPlayerRef.current.setVolume(volume * 100);
-    } catch (e) { /* ignore */ }
+    try { ytPlayerRef.current.setVolume(volume * 100); } catch (e) {}
   }, [volume, isYT, ytReady]);
 
   // ── Progress polling for YouTube ─────────────────────────────────────
@@ -161,32 +155,24 @@ export default function Player() {
       clearInterval(ytIntervalRef.current);
       ytIntervalRef.current = null;
     }
-    
     if (isYT && isPlaying && ytReady) {
       ytIntervalRef.current = setInterval(() => {
         if (ytPlayerRef.current?.getCurrentTime) {
           const currentTime = ytPlayerRef.current.getCurrentTime();
           setProgress(currentTime);
-          
           const dur = ytPlayerRef.current.getDuration?.();
           if (dur && dur > 0) setDuration(dur);
         }
       }, 500);
     }
-    
-    return () => {
-      if (ytIntervalRef.current) clearInterval(ytIntervalRef.current);
-    };
+    return () => { if (ytIntervalRef.current) clearInterval(ytIntervalRef.current); };
   }, [isYT, isPlaying, ytReady]);
 
   // ── Native <audio> sync (for non-YouTube tracks) ────────────────────
   useEffect(() => {
     if (isYT || !audioRef.current) return;
-
     if (isPlaying) {
-      audioRef.current.play().catch(err => {
-        console.error('[Audio] Playback error:', err);
-      });
+      audioRef.current.play().catch(err => console.error('[Audio] Playback error:', err));
     } else {
       audioRef.current.pause();
     }
@@ -231,6 +217,50 @@ export default function Player() {
   const progressPct = duration > 0 ? (progress / duration) * 100 : 0;
   const volumePct = volume * 100;
 
+  // ── Media Session API — background playback & lock screen controls ──
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentTrack) return;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.title || 'Unknown',
+      artist: currentTrack.artist || 'Unknown Artist',
+      album: 'SonicStream',
+      artwork: [
+        { src: currentTrack.albumArt || currentTrack.cover || '', sizes: '512x512', type: 'image/jpeg' },
+      ],
+    });
+
+    navigator.mediaSession.setActionHandler('play', () => { if (!isPlaying) togglePlay(); });
+    navigator.mediaSession.setActionHandler('pause', () => { if (isPlaying) togglePlay(); });
+    navigator.mediaSession.setActionHandler('previoustrack', () => playPrevious());
+    navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime != null) handleSeek(details.seekTime);
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      handleSeek(Math.max(0, progress - (details.seekOffset || 10)));
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      handleSeek(Math.min(duration, progress + (details.seekOffset || 10)));
+    });
+  }, [currentTrack, isPlaying, progress, duration]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !duration) return;
+    try {
+      navigator.mediaSession.setPositionState({
+        duration: duration,
+        playbackRate: 1,
+        position: Math.min(progress, duration),
+      });
+    } catch (e) { /* ignore */ }
+  }, [progress, duration]);
+
   return (
     <>
       {/* Native <audio> for non-YouTube sources */}
@@ -259,7 +289,7 @@ export default function Player() {
         />
       )}
 
-      {/* YouTube Player - hidden behind player bar (1x1px, not display:none so YT still plays) */}
+      {/* YouTube Player - hidden (1x1px, opacity 0.01) */}
       <div style={{ 
         position: 'fixed', 
         bottom: 0, 
