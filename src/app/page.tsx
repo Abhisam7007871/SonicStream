@@ -64,6 +64,9 @@ export default function Home() {
   // Quick mix loading state
   const [mixLoading, setMixLoading] = useState<number | null>(null);
 
+  // Browse All genres view
+  const [browseGenres, setBrowseGenres] = useState(false);
+
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
   useEffect(() => {
@@ -157,6 +160,84 @@ export default function Home() {
     setExpandedLoading(false);
   };
 
+  // All genre categories for "Browse All"
+  const ALL_GENRES = [
+    { name: 'Pop',          color: '#ec4899', search: 'pop songs 2024' },
+    { name: 'Hip-Hop',      color: '#8b5cf6', search: 'hip hop rap songs 2024' },
+    { name: 'Rock',         color: '#ef4444', search: 'rock songs 2024' },
+    { name: 'R&B',          color: '#f59e0b', search: 'r&b songs 2024' },
+    { name: 'Bollywood',    color: '#ff9800', search: 'bollywood hindi songs 2024' },
+    { name: 'Punjabi',      color: '#e040fb', search: 'punjabi songs 2024' },
+    { name: 'K-Pop',        color: '#00e5ff', search: 'kpop songs 2024' },
+    { name: 'EDM',          color: '#06b6d4', search: 'edm electronic dance songs' },
+    { name: 'Jazz',         color: '#f59e0b', search: 'jazz songs classics' },
+    { name: 'Classical',    color: '#14b8a6', search: 'classical music famous' },
+    { name: 'Indie',        color: '#84cc16', search: 'indie songs 2024' },
+    { name: 'Country',      color: '#d97706', search: 'country songs 2024' },
+    { name: 'Latin',        color: '#f43f5e', search: 'latin reggaeton songs 2024' },
+    { name: 'Lofi',         color: '#a78bfa', search: 'lofi chill beats' },
+    { name: 'Sad Songs',    color: '#6366f1', search: 'sad emotional songs' },
+    { name: 'Romantic',     color: '#ec4899', search: 'romantic love songs' },
+    { name: 'Party',        color: '#f43f5e', search: 'party dance songs 2024' },
+    { name: 'Old School',   color: '#78716c', search: 'old school classic songs 90s 2000s' },
+  ];
+
+  // Browse All genres view
+  if (browseGenres) {
+    return (
+      <div className={styles.home}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+          <button 
+            onClick={() => setBrowseGenres(false)}
+            style={{
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 50,
+              width: 40, height: 40,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: 'white',
+            }}
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>Browse by Genre</h1>
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
+          gap: 16,
+        }}>
+          {ALL_GENRES.map(genre => (
+            <div
+              key={genre.name}
+              onClick={() => {
+                setBrowseGenres(false);
+                handleSeeAll(`genre-${genre.name}`, genre.name, genre.search);
+              }}
+              style={{
+                background: `linear-gradient(135deg, ${genre.color}, ${genre.color}44)`,
+                borderRadius: 16,
+                padding: '28px 20px',
+                cursor: 'pointer',
+                fontWeight: 800,
+                fontSize: '1.1rem',
+                color: 'white',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+                minHeight: 100,
+                display: 'flex',
+                alignItems: 'flex-end',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.03)'; e.currentTarget.style.boxShadow = `0 8px 24px ${genre.color}44`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = 'none'; }}
+            >
+              {genre.name}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // If a section is expanded, show full song list
   if (expandedSection) {
     return (
@@ -226,22 +307,29 @@ export default function Home() {
         <div className={styles.heroContent}>
           <span className={styles.badge}>
             <Sparkles size={14} style={{ marginRight: '8px' }} />
-            Premium Streaming
+            Your Music, Your Way
           </span>
           <h1 className={styles.heroTitle}>Discover Your <br />Perfect Sound</h1>
           <p className={styles.heroDescription}>
-            Immerse yourself in high-fidelity audio from around the world. 
-            Official tracks, curated playlists, and a seamless listening experience.
+            Millions of songs at your fingertips. Stream trending tracks,
+            explore new genres, and build your personal collection.
           </p>
           <div className={styles.heroActions}>
             <button
               className={styles.primaryButton}
-              onClick={() => trending[0] && handlePlay(trending[0], trending)}
+              onClick={() => {
+                // Play from local songs based on what's available
+                if (trending.length > 0) {
+                  const shuffled = [...trending].sort(() => Math.random() - 0.5);
+                  setQueue(shuffled);
+                  handlePlay(shuffled[0], shuffled);
+                }
+              }}
             >
               <Play size={24} fill="currentColor" />
               <span>Listen Now</span>
             </button>
-            <button className={styles.secondaryButton} onClick={() => handleSeeAll('trending-all', 'Trending Worldwide', 'top hits 2024 trending songs')}>
+            <button className={styles.secondaryButton} onClick={() => setBrowseGenres(true)}>
               <Globe size={20} />
               <span>Browse All</span>
             </button>
