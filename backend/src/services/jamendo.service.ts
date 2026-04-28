@@ -170,13 +170,13 @@ export async function searchTracks(
   offset: number = 0
 ): Promise<{ tracks: JamendoTrack[]; total: number }> {
   const data = await jamendoGet('/tracks', {
-    namesearch: query,
+    search: query,           // searches track name + artist + album + tags
     limit,
     offset,
     include: 'musicinfo',
-    audioformat: 'ogg',     // 192kbps mp3
+    audioformat: 'ogg',
     imagesize: 300,
-    order: 'popularity_total',
+    boost: 'popularity_total',  // boost popular tracks to top while keeping relevance
     fullcount: true,
   });
 
