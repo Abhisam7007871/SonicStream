@@ -44,34 +44,47 @@ export default function SearchPage() {
     setActiveShow(null);
   }, [activeTab]);
 
-  // Fetch logic
+  // Fetch logic - Multi-source aggregation
   useEffect(() => {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
     const controller = new AbortController();
 
     if (activeTab === 'Music') {
       setLoading(true);
-      const offset = (page - 1) * LIMIT;
-      const searchQuery = debouncedQuery.trim() || 'popular';
-      const endpoint = `${API_BASE}/api/jamendo/search?q=${encodeURIComponent(searchQuery)}&limit=${LIMIT}&offset=${offset}`;
+      const searchQuery = debouncedQuery.trim() || 'top hits 2024';
       
-      fetch(endpoint, { signal: controller.signal })
-        .then(r => r.json())
-        .then(data => {
-          setResults(data.results || []);
-          setTotal(data.total || 0);
+      // Search YouTube (mainstream) + Jamendo (indie) in parallel
+      const ytPromise = fetch(
+        `${API_BASE}/api/youtube/search?q=${encodeURIComponent(searchQuery)}&limit=${LIMIT}`,
+        { signal: controller.signal }
+      ).then(r => r.json()).catch(() => ({ results: [] }));
+
+      const jamendoPromise = fetch(
+        `${API_BASE}/api/jamendo/search?q=${encodeURIComponent(searchQuery)}&limit=10&offset=0`,
+        { signal: controller.signal }
+      ).then(r => r.json()).catch(() => ({ results: [] }));
+
+      Promise.all([ytPromise, jamendoPromise])
+        .then(([ytData, jamData]) => {
+          // YouTube results first (mainstream), then Jamendo (indie/free)
+          const ytResults = (ytData.results || []).map((r: any) => ({ ...r, source: r.source || 'youtube' }));
+          const jamResults = (jamData.results || []).map((r: any) => ({ ...r, source: 'jamendo' }));
+          
+          // Merge: YouTube on top (mainstream), Jamendo at bottom
+          const merged = [...ytResults, ...jamResults];
+          setResults(merged);
+          setTotal(merged.length);
           setLoading(false);
         })
-        .catch((err) => { 
+        .catch((err) => {
           if (err.name !== 'AbortError') {
-            setResults([]); 
-            setLoading(false); 
+            setResults([]);
+            setLoading(false);
           }
         });
     }
     else if (activeTab === 'Podcasts') {
       setLoading(true);
-      // If there's a search query, search for podcasts. Otherwise show popular ones.
       const searchQuery = debouncedQuery.trim();
       const endpoint = searchQuery
         ? `${API_BASE}/api/podcasts/search?q=${encodeURIComponent(searchQuery)}&limit=20`
@@ -107,8 +120,6 @@ export default function SearchPage() {
       .catch(() => { setEpisodes([]); setLoading(false); });
   };
 
-  const totalPages = Math.ceil(total / LIMIT);
-
   const { isInLibrary } = useLibraryStore();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
@@ -130,7 +141,7 @@ export default function SearchPage() {
       <h2 className={styles.sectionTitle}>
         {activeTab === 'Podcasts' && activeShow 
           ? activeShow.title 
-          : (debouncedQuery ? `Results for "${debouncedQuery}"` : 'Popular Tracks')}
+          : (debouncedQuery ? `Results for "${debouncedQuery}"` : 'Trending')}
       </h2>
 
       {activeTab === 'Music' && (
@@ -139,9 +150,9 @@ export default function SearchPage() {
             {loading ? (
               <div className={styles.loading}>Searching...</div>
             ) : results.length > 0 ? (
-              results.map((song) => (
+              results.map((song, idx) => (
                 <div 
-                  key={song.id} 
+                  key={`${song.source}-${song.id}-${idx}`} 
                   className={styles.songRow} 
                   onClick={() => {
                     setQueue(results);
@@ -182,27 +193,6 @@ export default function SearchPage() {
               <div className={styles.noResults}>No tracks found. Try a different search.</div>
             )}
           </div>
-
-          {/* Pagination */}
-          {total > LIMIT && (
-            <div className={styles.pagination}>
-              <button 
-                disabled={page === 1} 
-                onClick={() => setPage(p => p - 1)}
-                className={styles.pageBtn}
-              >
-                <ChevronLeft size={20} /> Previous
-              </button>
-              <span className={styles.pageInfo}>Page {page} of {totalPages || 1}</span>
-              <button 
-                disabled={page >= totalPages} 
-                onClick={() => setPage(p => p + 1)}
-                className={styles.pageBtn}
-              >
-                Next <ChevronRight size={20} />
-              </button>
-            </div>
-          )}
         </>
       )}
 
