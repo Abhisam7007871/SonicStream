@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { trackSongPlay } from './useAnalytics';
 
 interface Track {
   id: string | number;
@@ -101,6 +102,14 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       progress: 0,
       duration: 0,
       audiomackUrl: track.source === 'audiomack' ? track.url : null,
+    });
+
+    // Track song play for analytics (non-blocking)
+    trackSongPlay({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      source: track.source,
     });
   },
 

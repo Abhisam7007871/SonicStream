@@ -7,6 +7,7 @@ import Player from "@/components/Player";
 import Navbar from "@/components/Navbar";
 import AuthOverlay from "@/components/AuthOverlay";
 import AudiomackManager from "@/components/AudiomackManager";
+import AnalyticsProvider from "@/components/AnalyticsProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -49,6 +50,7 @@ export default function RootLayout({
           </main>
           <Player />
           <AudiomackManager />
+          <AnalyticsProvider />
         </div>
       </body>
     </html>

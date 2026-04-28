@@ -65,3 +65,52 @@ model Subscription {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+// ─── Analytics: User Tracking ───
+
+model UserSession {
+  id           String   @id @default(uuid())
+  deviceId     String   // unique device fingerprint from localStorage
+  userId       String?  // null for anonymous users
+  ipAddress    String?
+  userAgent    String?
+  platform     String   @default("web") // web, android, ios
+  sessionStart DateTime @default(now())
+  lastActive   DateTime @default(now())
+  pagesViewed  Int      @default(1)
+  songsPlayed  Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@index([deviceId])
+  @@index([userId])
+  @@index([sessionStart])
+}
+
+model UniqueUser {
+  id        String   @id @default(uuid())
+  deviceId  String   @unique
+  userId    String?  // linked when they log in
+  ipAddress String?
+  platform  String   @default("web")
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+  totalSessions Int  @default(1)
+  totalSongsPlayed Int @default(0)
+
+  @@index([deviceId])
+  @@index([userId])
+}
+
+model SongPlay {
+  id        String   @id @default(uuid())
+  deviceId  String
+  userId    String?
+  songId    String   // youtube/jamendo/etc id
+  songTitle String
+  artist    String
+  source    String   // youtube, jamendo, etc
+  playedAt  DateTime @default(now())
+
+  @@index([deviceId])
+  @@index([playedAt])
+}

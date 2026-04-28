@@ -418,6 +418,193 @@ app.get('/api/jamendo/genres', (req, res) => {
   res.json({ genres: jamendo.JAMENDO_GENRES });
 });
 
+// ─────────────────────────────────────────────
+//  ANALYTICS: User Tracking & Counting
+// ─────────────────────────────────────────────
+
+function getClientIp(req: any): string {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim()
+    || req.headers['x-real-ip']
+    || req.socket?.remoteAddress
+    || 'unknown';
+}
+
+// Track session (called by frontend on app load)
+app.post('/api/analytics/session', async (req, res) => {
+  try {
+    const { deviceId, userId, platform } = req.body;
+    if (!deviceId) return res.status(400).json({ error: 'deviceId required' });
+
+    const ipAddress = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || '';
+
+    // Upsert unique user
+    await prisma.uniqueUser.upsert({
+      where: { deviceId },
+      update: {
+        lastSeen: new Date(),
+        totalSessions: { increment: 1 },
+        ipAddress,
+        ...(userId ? { userId } : {}),
+      },
+      create: {
+        deviceId,
+        userId: userId || null,
+        ipAddress,
+        platform: platform || 'web',
+      },
+    });
+
+    // Create session
+    const session = await prisma.userSession.create({
+      data: {
+        deviceId,
+        userId: userId || null,
+        ipAddress,
+        userAgent,
+        platform: platform || 'web',
+      },
+    });
+
+    res.json({ sessionId: session.id, tracked: true });
+  } catch (err: any) {
+    console.error('Analytics session error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Track song play
+app.post('/api/analytics/play', async (req, res) => {
+  try {
+    const { deviceId, userId, songId, songTitle, artist, source } = req.body;
+    if (!deviceId || !songId) return res.status(400).json({ error: 'deviceId and songId required' });
+
+    await prisma.songPlay.create({
+      data: {
+        deviceId,
+        userId: userId || null,
+        songId: String(songId),
+        songTitle: songTitle || 'Unknown',
+        artist: artist || 'Unknown',
+        source: source || 'youtube',
+      },
+    });
+
+    // Update counters
+    await prisma.uniqueUser.update({
+      where: { deviceId },
+      data: { totalSongsPlayed: { increment: 1 } },
+    }).catch(() => {}); // ignore if user doesn't exist yet
+
+    res.json({ tracked: true });
+  } catch (err: any) {
+    console.error('Analytics play error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Heartbeat — keep session alive
+app.post('/api/analytics/heartbeat', async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) return res.status(400).json({ error: 'sessionId required' });
+
+    await prisma.userSession.update({
+      where: { id: sessionId },
+      data: {
+        lastActive: new Date(),
+        pagesViewed: { increment: 1 },
+      },
+    }).catch(() => {});
+
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Analytics Dashboard (admin) ───
+app.get('/api/analytics/dashboard', async (req, res) => {
+  try {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      totalUsers,
+      dauSessions,
+      wauSessions,
+      mauSessions,
+      totalSongsPlayed,
+      recentSessions,
+      topSongs,
+    ] = await Promise.all([
+      // Total unique users ever
+      prisma.uniqueUser.count(),
+      // DAU: unique deviceIds today
+      prisma.userSession.findMany({
+        where: { sessionStart: { gte: today } },
+        distinct: ['deviceId'],
+        select: { deviceId: true },
+      }),
+      // WAU: unique deviceIds last 7 days
+      prisma.userSession.findMany({
+        where: { sessionStart: { gte: sevenDaysAgo } },
+        distinct: ['deviceId'],
+        select: { deviceId: true },
+      }),
+      // MAU: unique deviceIds last 30 days
+      prisma.userSession.findMany({
+        where: { sessionStart: { gte: thirtyDaysAgo } },
+        distinct: ['deviceId'],
+        select: { deviceId: true },
+      }),
+      // Total songs played
+      prisma.songPlay.count(),
+      // Recent 10 sessions
+      prisma.userSession.findMany({
+        orderBy: { sessionStart: 'desc' },
+        take: 10,
+        select: {
+          deviceId: true,
+          userId: true,
+          ipAddress: true,
+          platform: true,
+          sessionStart: true,
+          songsPlayed: true,
+        },
+      }),
+      // Top 10 most played songs
+      prisma.songPlay.groupBy({
+        by: ['songId', 'songTitle', 'artist'],
+        _count: { songId: true },
+        orderBy: { _count: { songId: 'desc' } },
+        take: 10,
+      }),
+    ]);
+
+    res.json({
+      totalUsers,
+      dau: dauSessions.length,
+      wau: wauSessions.length,
+      mau: mauSessions.length,
+      totalSongsPlayed,
+      recentSessions,
+      topSongs: topSongs.map((s: any) => ({
+        songId: s.songId,
+        title: s.songTitle,
+        artist: s.artist,
+        plays: s._count.songId,
+      })),
+      timestamp: now.toISOString(),
+    });
+  } catch (err: any) {
+    console.error('Analytics dashboard error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Protected Playlist Routes
 app.get('/api/playlists', authMiddleware, async (req: AuthRequest, res) => {
   if (!req.userId) return res.status(401).json({ message: 'Unauthorized' });
