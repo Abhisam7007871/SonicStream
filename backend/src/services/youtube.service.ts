@@ -197,13 +197,129 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
   return null;
 }
 
+// ── Label / non-artist channel names to replace with extracted artist ──
+const LABEL_CHANNELS = new Set([
+  't-series', 'tseries', 'sony music india', 'sony music south',
+  'zee music company', 'speed records', 'tips official', 'tips music',
+  'yrf', 'saregama music', 'saregama', 'aditya music', 'lahari music',
+  'mango music', 'lehren retro', 'ultra music', 'universal music india',
+  'sony music entertainment', 'warner music india', 'vevo',
+  'atlantic records', 'republic records', 'interscope records',
+  'columbia records', 'rca records', 'def jam recordings',
+  'capitol records', 'universal music', 'sony music',
+  'warner records', 'big machine records', 'island records',
+  'epic records', 'virgin records', 'parlophone records',
+  'shemaroo', 'shemaroo filmi gaane', 'eros now music',
+  'pen studios', 'pen music', 'divo music', 'think music india',
+  'sun music', 'junglee music', 'venus',
+]);
+
+/**
+ * Cleans a YouTube video title to show just the song name.
+ * Removes "(Official Video)", "| Artist | Label", "[HD]", etc.
+ */
+function cleanTitle(raw: string): string {
+  let t = raw;
+
+  // Remove common YouTube suffixes in parentheses/brackets
+  t = t.replace(/\s*[\(\[]\s*(Official\s*(Music\s*)?Video|Official\s*Audio|Official\s*Lyric\s*Video|Full\s*Video(\s*Song)?|Video\s*Song|Audio\s*Song|Lyric\s*Video|Lyrics?\s*Video|HD|HQ|4K|1080p|720p|Visualizer|Visualiser|Audio|MV|M\/V|Teaser|Trailer|Promo)\s*[\)\]]/gi, '');
+
+  // Remove "Full Video Song", "Video Song" etc. without brackets
+  t = t.replace(/\s*-?\s*(Full\s+Video\s+Song|Video\s+Song|Official\s+Music\s+Video|Official\s+Video|Official\s+Audio|Audio\s+Song|Lyric\s+Video)/gi, '');
+
+  // Remove everything after | (usually "| Artist | Label")
+  t = t.replace(/\s*\|.*$/, '');
+
+  // Remove "ft." or "feat." artist names at end
+  // Keep the main part but trim featured artists from title
+  // t = t.replace(/\s+(ft\.?|feat\.?)\s+.*/i, '');
+
+  // Remove trailing " - " with label/channel names
+  t = t.replace(/\s*-\s*(T-Series|Sony Music|YRF|Zee Music|Saregama|Vevo).*$/i, '');
+
+  // Remove hashtags
+  t = t.replace(/#\w+/g, '');
+
+  // Remove extra whitespace, dashes at end
+  t = t.replace(/\s*[-–—:]\s*$/, '').trim();
+
+  // Limit to 60 chars
+  if (t.length > 60) {
+    t = t.substring(0, 57) + '...';
+  }
+
+  return t || raw.substring(0, 60);
+}
+
+/**
+ * Tries to extract real artist name from the title (before " - " or " – ").
+ * Falls back to channel name if not a label.
+ */
+function cleanArtist(channelName: string, title: string): string {
+  const isLabel = LABEL_CHANNELS.has(channelName.toLowerCase().trim());
+
+  if (isLabel) {
+    // Try to extract artist from title pattern: "Artist - Song Name"
+    const dashMatch = title.match(/^(.+?)\s*[-–—]\s+/);
+    if (dashMatch) {
+      let artist = dashMatch[1].trim();
+      // Remove "Song Name by Artist" patterns
+      if (artist.length > 2 && artist.length < 60) {
+        return artist;
+      }
+    }
+
+    // Try to extract from "Song | Artist | Label" pattern  
+    const pipeMatch = title.match(/\|\s*([^|]+)/);
+    if (pipeMatch) {
+      const candidate = pipeMatch[1].trim();
+      // Make sure it's not another label
+      if (!LABEL_CHANNELS.has(candidate.toLowerCase()) && candidate.length < 40) {
+        return candidate;
+      }
+    }
+
+    return 'Unknown Artist';
+  }
+
+  // Channel name is the actual artist
+  // Clean common suffixes like "VEVO", " - Topic"
+  let name = channelName
+    .replace(/VEVO$/i, '')
+    .replace(/\s*-\s*Topic$/i, '')
+    .replace(/Official$/i, '')
+    .trim();
+
+  return name || channelName;
+}
+
 /**
  * Searches YouTube and returns normalised track objects.
  */
 export async function searchYouTube(query: string, limit: number = 30) {
   try {
-    const r = await yts(query);
+    // Add "song" or "audio" to query to bias toward music
+    const musicQuery = query.match(/(song|audio|lyrics|music)/i) ? query : `${query} song`;
+    const r = await yts(musicQuery);
     let videos = r.videos;
+
+    // Filter out non-music content (compilations, podcasts, very long videos)
+    videos = videos.filter(v => {
+      const dur = v.seconds || 0;
+      // Skip videos > 12 min (likely full albums/compilations)
+      if (dur > 720) return false;
+      // Skip very short clips < 30 sec
+      if (dur < 30) return false;
+      // Skip titles with common non-song patterns
+      const lowerTitle = v.title.toLowerCase();
+      if (lowerTitle.includes('compilation') || lowerTitle.includes('jukebox') || 
+          lowerTitle.includes('all songs') || lowerTitle.includes('full album') ||
+          lowerTitle.includes('top 10') || lowerTitle.includes('top 20') ||
+          lowerTitle.includes('best of') || lowerTitle.includes('mashup mix')) {
+        return false;
+      }
+      return true;
+    });
 
     if (videos.length > 0) {
       // Boost top-5 most-viewed results to front
@@ -213,8 +329,8 @@ export async function searchYouTube(query: string, limit: number = 30) {
 
     return videos.slice(0, limit).map((v) => ({
       id: v.videoId,
-      title: v.title,
-      artist: v.author.name,
+      title: cleanTitle(v.title),
+      artist: cleanArtist(v.author.name, v.title),
       cover: v.thumbnail,
       albumArt: v.thumbnail,
       source: 'youtube',
