@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import TrackOptionsMenu from '@/components/TrackOptionsMenu';
 
 const TABS = ['Music', 'Podcasts'];
-const LIMIT = 30;
+const LIMIT = 50;
 
 export default function SearchPage() {
   const { query } = useSearchStore();

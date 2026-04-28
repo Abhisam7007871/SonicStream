@@ -296,12 +296,33 @@ function cleanArtist(channelName: string, title: string): string {
 /**
  * Searches YouTube and returns normalised track objects.
  */
-export async function searchYouTube(query: string, limit: number = 30) {
+export async function searchYouTube(query: string, limit: number = 50) {
   try {
     // Add "song" or "audio" to query to bias toward music
-    const musicQuery = query.match(/(song|audio|lyrics|music)/i) ? query : `${query} song`;
-    const r = await yts(musicQuery);
-    let videos = r.videos;
+    const musicQuery = query.match(/(song|audio|lyrics|music)/i) ? query : `${query} songs`;
+    
+    // Search with multiple queries to get more results
+    const searches = [
+      yts(musicQuery),
+      yts(`${query} music`),
+    ];
+    
+    const results = await Promise.allSettled(searches);
+    const allVideos: any[] = [];
+    const seenIds = new Set<string>();
+    
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        for (const v of result.value.videos) {
+          if (!seenIds.has(v.videoId)) {
+            seenIds.add(v.videoId);
+            allVideos.push(v);
+          }
+        }
+      }
+    }
+    
+    let videos = allVideos;
 
     // Filter out non-music content (compilations, podcasts, very long videos)
     videos = videos.filter(v => {
