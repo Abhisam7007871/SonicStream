@@ -23,7 +23,7 @@ const JAMENDO_BASE = 'https://api.jamendo.com/v3.0';
  *
  * Without a valid client_id, all API calls will fail with error code 5 or 11.
  */
-const CLIENT_ID = process.env.JAMENDO_CLIENT_ID || '';
+const CLIENT_ID = process.env.JAMENDO_CLIENT_ID || '4c2874d5';
 
 // Cache results for 10 minutes to stay under rate limits
 const cache = new NodeCache({ stdTTL: 600 });
@@ -38,6 +38,7 @@ export interface JamendoTrack {
   album: string;
   albumId: string;
   albumArt: string;
+  cover: string;          // alias for frontend compatibility
   url: string;           // direct streaming URL (mp3)
   downloadUrl: string;
   duration: number;       // seconds
@@ -112,6 +113,7 @@ async function jamendoGet(endpoint: string, params: Record<string, string | numb
 function normalizeTrack(raw: any): JamendoTrack {
   const trackId = String(raw.id);
   const artistId = String(raw.artist_id || '');
+  const cover = raw.album_image || raw.image || '';
   return {
     id: trackId,
     title: raw.name || raw.title || 'Unknown',
@@ -119,7 +121,8 @@ function normalizeTrack(raw: any): JamendoTrack {
     artistId,
     album: raw.album_name || '',
     albumId: String(raw.album_id || ''),
-    albumArt: raw.album_image || raw.image || '',
+    albumArt: cover,
+    cover,                              // alias for frontend compatibility
     url: raw.audio || '',              // direct stream URL
     downloadUrl: raw.audiodownload || '',
     duration: Number(raw.duration) || 0,
