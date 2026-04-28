@@ -1,0 +1,24 @@
+# Render Blueprint — Single Web Service for SonicStream
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: sonicstream
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      # Copy these from backend/.env or set in Render dashboard
+      - key: JWT_SECRET
+        sync: false
+      - key: JAMENDO_CLIENT_ID
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true

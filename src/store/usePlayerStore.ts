@@ -7,7 +7,7 @@ interface Track {
   albumArt?: string;
   cover?: string;
   url: string;
-  source?: 'audiomack' | 'internal' | 'itunes' | 'youtube' | 'internetarchive';
+  source?: 'audiomack' | 'internal' | 'itunes' | 'youtube' | 'internetarchive' | 'jamendo';
 }
 
 type AudioQuality = '48kbps' | '128kbps' | '256kbps' | '320kbps' | 'FLAC';
@@ -45,7 +45,7 @@ interface PlayerState {
   decreaseVolume: () => void;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 /**
  * Resolves a track to a playable direct-audio URL.

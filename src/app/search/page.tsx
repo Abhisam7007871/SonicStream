@@ -8,7 +8,7 @@ import { useLibraryStore } from '@/store/useLibraryStore';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import TrackOptionsMenu from '@/components/TrackOptionsMenu';
 
-const TABS = ['Global (YouTube)', 'Mainstream', 'Regional Classics', 'Open Library', 'Podcasts'];
+const TABS = ['Jamendo (Free Music)', 'Global (YouTube)', 'Mainstream', 'Regional Classics', 'Open Library', 'Podcasts'];
 const LIMIT = 25;
 
 export default function SearchPage() {
@@ -47,9 +47,21 @@ export default function SearchPage() {
   // Fetch logic
   useEffect(() => {
     setLoading(true);
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-    
-    if (activeTab === 'Global (YouTube)') {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
+    if (activeTab === 'Jamendo (Free Music)') {
+      const offset = (page - 1) * LIMIT;
+      const endpoint = `${API_BASE}/api/jamendo/search?q=${encodeURIComponent(debouncedQuery || 'popular')}&limit=${LIMIT}&offset=${offset}`;
+      fetch(endpoint)
+        .then(r => r.json())
+        .then(data => {
+          setResults(data.results || []);
+          setTotal(data.total || 0);
+          setLoading(false);
+        })
+        .catch(() => { setResults([]); setLoading(false); });
+    }
+    else if (activeTab === 'Global (YouTube)') {
       const endpoint = `${API_BASE}/api/youtube/search?q=${encodeURIComponent(debouncedQuery || 'top music hits 2024')}&page=${page}&limit=${LIMIT}`;
       fetch(endpoint)
         .then(r => r.json())
@@ -106,7 +118,7 @@ export default function SearchPage() {
   const loadPodcastFeed = (feedUrl: string, showData: any) => {
     setLoading(true);
     setActiveShow(showData);
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
     fetch(`${API_BASE}/api/podcasts/feed?url=${encodeURIComponent(feedUrl)}`)
       .then(r => r.json())
       .then(data => {
@@ -158,9 +170,31 @@ export default function SearchPage() {
                     <img src={song.cover || song.albumArt} alt="" className={styles.songArt} style={{ objectFit: 'cover' }} />
                     <div className={styles.songMeta}>
                       <span className={styles.songName}>{song.title}</span>
-                      <span className={styles.songArtist}>{song.artist}</span>
+                      <span className={styles.songArtist}>
+                        {song.artist}
+                        {/* Jamendo ToS Clause 4.1: Credit artist + Jamendo + backlink */}
+                        {song.source === 'jamendo' && song.shareUrl && (
+                          <a
+                            href={song.shareUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ marginLeft: 6, fontSize: '0.7rem', color: '#10b981', textDecoration: 'none', opacity: 0.85 }}
+                            title="View on Jamendo"
+                          >
+                            via Jamendo
+                          </a>
+                        )}
+                      </span>
+                      {/* Show CC license badge for Jamendo tracks */}
+                      {song.source === 'jamendo' && song.licenseName && (
+                        <span style={{ fontSize: '0.6rem', color: '#888', marginTop: 2, display: 'block' }}>
+                          🅭 {song.licenseName}
+                        </span>
+                      )}
                     </div>
-                    {song.source !== 'youtube' && <span className={styles.songGenreTag}>{song.source}</span>}
+                    {song.source !== 'youtube' && song.source !== 'jamendo' && <span className={styles.songGenreTag}>{song.source}</span>}
+                    {song.source === 'jamendo' && <span className={styles.songGenreTag} style={{ background: '#10b98133', color: '#10b981' }}>♫ Free</span>}
                   </div>
                   <div className={styles.songActions} style={{ position: 'relative' }}>
                     <button 

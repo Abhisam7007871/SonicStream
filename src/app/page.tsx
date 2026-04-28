@@ -15,6 +15,7 @@ interface Song {
   duration: string;
   url: string;
   albumArt: string;
+  source?: 'audiomack' | 'internal' | 'itunes' | 'youtube' | 'internetarchive' | 'jamendo';
 }
 
 const LANGUAGE_CONFIG = [
@@ -33,14 +34,30 @@ const QUICK_MIXES = [
   { id: 6, title: 'Release Radar',  color: '#06b6d4' },
 ];
 
+const JAMENDO_GENRE_ROWS = [
+  { tag: 'electronic', label: '⚡ Electronic',  color: '#06b6d4' },
+  { tag: 'rock',       label: '🎸 Rock',        color: '#ef4444' },
+  { tag: 'pop',        label: '🎤 Pop',         color: '#ec4899' },
+  { tag: 'jazz',       label: '🎷 Jazz & Soul', color: '#f59e0b' },
+  { tag: 'hiphop',     label: '🎧 Hip-Hop',     color: '#8b5cf6' },
+  { tag: 'ambient',    label: '🌙 Ambient',     color: '#14b8a6' },
+];
+
 export default function Home() {
-  const { setCurrentTrack } = usePlayerStore();
+  const { setCurrentTrack, setQueue } = usePlayerStore();
   const [trending, setTrending] = useState<Song[]>([]);
   const [languageSongs, setLanguageSongs] = useState<Record<string, Song[]>>({});
   const [loading, setLoading] = useState(true);
 
+  // Jamendo state
+  const [jamendoTrending, setJamendoTrending] = useState<Song[]>([]);
+  const [jamendoGenres, setJamendoGenres] = useState<Record<string, Song[]>>({});
+  const [jamendoLoading, setJamendoLoading] = useState(true);
+
   useEffect(() => {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+    
+    // Fetch iTunes / language data
     Promise.all([
       fetch(`${API_BASE}/api/music/trending`).then(r => r.json()).catch(() => ({ results: [] })),
       ...LANGUAGE_CONFIG.map(l =>
@@ -55,6 +72,22 @@ export default function Home() {
       setLanguageSongs(byLang);
       setLoading(false);
     }).catch(() => setLoading(false));
+
+    // Fetch Jamendo data (legal free music)
+    Promise.all([
+      fetch(`${API_BASE}/api/jamendo/trending?limit=12`).then(r => r.json()).catch(() => ({ results: [] })),
+      ...JAMENDO_GENRE_ROWS.map(g =>
+        fetch(`${API_BASE}/api/jamendo/tags/${g.tag}?limit=10`).then(r => r.json()).catch(() => ({ results: [] }))
+      ),
+    ]).then(([jamTrend, ...genreData]) => {
+      setJamendoTrending(jamTrend.results || []);
+      const byGenre: Record<string, Song[]> = {};
+      JAMENDO_GENRE_ROWS.forEach((g, i) => {
+        byGenre[g.tag] = (genreData[i] as any).results || [];
+      });
+      setJamendoGenres(byGenre);
+      setJamendoLoading(false);
+    }).catch(() => setJamendoLoading(false));
   }, []);
 
   const handlePlay = (song: Song) => {
@@ -191,6 +224,106 @@ export default function Home() {
                   <div className={styles.trackInfo}>
                     <h4 className={styles.trackName}>{song?.title ?? '—'}</h4>
                     <p className={styles.trackArtist}>{song?.artist ?? 'Unknown Artist'}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+
+      {/* ─── Jamendo: Free to Stream ─── */}
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <h2 className={styles.sectionTitle}>
+            <Music2 size={28} style={{ color: '#10b981' }} />
+            🎵 Free to Stream (Jamendo)
+          </h2>
+          <button className={styles.seeAll}>Explore All</button>
+        </div>
+        <div className={styles.horizontalScroll}>
+          {(jamendoLoading ? Array(10).fill(null) : jamendoTrending).map((song, i) => (
+            <div
+              key={`jamendo-trend-${song?.id ?? i}`}
+              className={styles.trackCard}
+              onClick={() => {
+                if (song) {
+                  setQueue(jamendoTrending);
+                  handlePlay(song);
+                }
+              }}
+            >
+              <div className={styles.trackArtWrapper}>
+                {song?.albumArt ? (
+                  <>
+                    <img src={song.albumArt} alt={song.title} className={styles.trackArtImg} />
+                    <div className={styles.trackPlayOverlay}>
+                      <Play size={40} fill="white" />
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className={jamendoLoading ? styles.skeleton : styles.trackArtPlaceholder}
+                    style={{ background: 'linear-gradient(135deg, #10b98133, #0a0a0f)' }}
+                  >
+                    <div className={styles.trackPlayOverlay}>
+                      <Play size={40} fill="white" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className={styles.trackInfo}>
+                <h4 className={styles.trackName}>{song?.title ?? '—'}</h4>
+                <p className={styles.trackArtist}>{song?.artist ?? 'Independent Artist'}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Jamendo Genre Rows */}
+      {JAMENDO_GENRE_ROWS.map(({ tag, label, color }) => {
+        const songs = jamendoGenres[tag] || [];
+        return (
+          <section key={`jamendo-${tag}`} className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <h2 className={styles.sectionTitle}>{label}</h2>
+              <button className={styles.seeAll}>See All</button>
+            </div>
+            <div className={styles.horizontalScroll}>
+              {(jamendoLoading ? Array(6).fill(null) : songs).map((song, i) => (
+                <div
+                  key={`jamendo-${tag}-${song?.id ?? i}`}
+                  className={styles.trackCard}
+                  onClick={() => {
+                    if (song) {
+                      setQueue(songs);
+                      handlePlay(song);
+                    }
+                  }}
+                >
+                  <div className={styles.trackArtWrapper}>
+                    {song?.albumArt ? (
+                      <>
+                        <img src={song.albumArt} alt={song.title} className={styles.trackArtImg} />
+                        <div className={styles.trackPlayOverlay}>
+                          <Play size={40} fill="white" />
+                        </div>
+                      </>
+                    ) : (
+                      <div
+                        className={jamendoLoading ? styles.skeleton : styles.trackArtPlaceholder}
+                        style={{ background: `linear-gradient(135deg, ${color}33, #0a0a0f)` }}
+                      >
+                        <div className={styles.trackPlayOverlay}>
+                          <Play size={40} fill="white" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className={styles.trackInfo}>
+                    <h4 className={styles.trackName}>{song?.title ?? '—'}</h4>
+                    <p className={styles.trackArtist}>{song?.artist ?? 'Independent Artist'}</p>
                   </div>
                 </div>
               ))}

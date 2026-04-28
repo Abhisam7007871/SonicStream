@@ -135,7 +135,21 @@ export default function Player() {
               />
               <div className={styles.details}>
                 <h4 className={styles.title}>{currentTrack.title}</h4>
-                <p className={styles.artist}>{currentTrack.artist}</p>
+                <p className={styles.artist}>
+                  {currentTrack.artist}
+                  {/* Jamendo ToS Clause 4.1: Attribution — credit artist + Jamendo + backlink */}
+                  {(currentTrack as any).source === 'jamendo' && (currentTrack as any).shareUrl && (
+                    <a
+                      href={(currentTrack as any).shareUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ marginLeft: 6, fontSize: '0.65rem', color: '#10b981', textDecoration: 'none', opacity: 0.8 }}
+                      title="View on Jamendo — Creative Commons licensed"
+                    >
+                      via Jamendo
+                    </a>
+                  )}
+                </p>
               </div>
             </>
           )}

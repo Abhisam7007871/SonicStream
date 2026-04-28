@@ -1,3 +1,15 @@
+if (typeof globalThis.File === 'undefined') {
+  globalThis.File = class File extends Blob {
+    name: string;
+    lastModified: number;
+    constructor(fileBits: any[], fileName: string, options?: any) {
+      super(fileBits, options);
+      this.name = fileName;
+      this.lastModified = options?.lastModified || Date.now();
+    }
+  } as any;
+}
+
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -34,6 +46,9 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Auth Routes
+app.use('/api/auth', authRoutes);
+
 // Routes
 import { searchItunes, LANGUAGE_SEARCHES } from './services/itunes.service';
 
@@ -53,8 +68,6 @@ app.get('/api/music/search', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
-import { searchYouTube } from './services/youtube.service';
 
 // YouTube Direct Search
 app.get('/api/youtube/search', async (req, res) => {
@@ -148,6 +161,7 @@ import { searchYouTube, getInvidiousAudioUrl, getYouTubeVideoId } from './servic
 import * as ia from './services/archive.service';
 import { searchAllSources } from './services/freeMusic.service';
 import { parseFeed, INDIAN_PODCASTS } from './services/rss.service';
+import * as jamendo from './services/jamendo.service';
 
 // YouTube Audio Stream Proxy Component
 // Takes iTunes metadata and returns a full native stream
@@ -283,6 +297,101 @@ app.get('/api/music/free-search', async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────
+//  JAMENDO ROUTES (legal, free Creative Commons music)
+// ─────────────────────────────────────────────
+
+// Search Jamendo tracks
+app.get('/api/jamendo/search', async (req, res) => {
+  try {
+    const { q, limit = 20, offset = 0 } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query required' });
+    const data = await jamendo.searchTracks(q as string, Number(limit), Number(offset));
+    res.json({ results: data.tracks, total: data.total, source: 'jamendo' });
+  } catch (err: any) {
+    console.error('Jamendo search error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Jamendo trending / popular tracks
+app.get('/api/jamendo/trending', async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 20;
+    const tracks = await jamendo.getTrendingTracks(limit);
+    res.json({ results: tracks, total: tracks.length, source: 'jamendo' });
+  } catch (err: any) {
+    console.error('Jamendo trending error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Jamendo tracks by genre/tag
+app.get('/api/jamendo/tags/:tag', async (req, res) => {
+  try {
+    const { limit = 20, offset = 0 } = req.query;
+    const data = await jamendo.getTracksByTag(req.params.tag, Number(limit), Number(offset));
+    res.json({ results: data.tracks, total: data.total, tag: req.params.tag, source: 'jamendo' });
+  } catch (err: any) {
+    console.error('Jamendo tag error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Jamendo artist search
+app.get('/api/jamendo/artists', async (req, res) => {
+  try {
+    const { q, limit = 20 } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query required' });
+    const artists = await jamendo.searchArtists(q as string, Number(limit));
+    res.json({ results: artists, total: artists.length, source: 'jamendo' });
+  } catch (err: any) {
+    console.error('Jamendo artist error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Jamendo artist tracks
+app.get('/api/jamendo/artists/:id/tracks', async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 50;
+    const tracks = await jamendo.getArtistTracks(req.params.id, limit);
+    res.json({ results: tracks, total: tracks.length, source: 'jamendo' });
+  } catch (err: any) {
+    console.error('Jamendo artist tracks error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Jamendo album tracks
+app.get('/api/jamendo/albums/:id/tracks', async (req, res) => {
+  try {
+    const data = await jamendo.getAlbumTracks(req.params.id);
+    res.json({ album: data.album, results: data.tracks, total: data.tracks.length, source: 'jamendo' });
+  } catch (err: any) {
+    console.error('Jamendo album tracks error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Jamendo autocomplete
+app.get('/api/jamendo/autocomplete', async (req, res) => {
+  try {
+    const { prefix } = req.query;
+    if (!prefix || typeof prefix !== 'string') return res.status(400).json({ error: 'Prefix required (min 2 chars)' });
+    const suggestions = await jamendo.autocomplete(prefix);
+    res.json(suggestions);
+  } catch (err: any) {
+    console.error('Jamendo autocomplete error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Jamendo available genres
+app.get('/api/jamendo/genres', (req, res) => {
+  res.json({ genres: jamendo.JAMENDO_GENRES });
+});
+
 // Protected Playlist Routes
 app.get('/api/playlists', authMiddleware, async (req: AuthRequest, res) => {
   if (!req.userId) return res.status(401).json({ message: 'Unauthorized' });
@@ -305,12 +414,17 @@ app.post('/api/playlists', authMiddleware, async (req: AuthRequest, res) => {
   res.status(201).json(playlist);
 });
 
-app.listen(PORT as number, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Export the Express app for use in unified server
+export { app, prisma };
 
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
-  process.exit(0);
-});
-// Trigger restart
+// Only self-listen if run directly (not imported by custom server)
+if (require.main === module) {
+  app.listen(PORT as number, '0.0.0.0', () => {
+    console.log(`Backend running standalone on port ${PORT}`);
+  });
+
+  process.on('SIGINT', async () => {
+    await prisma.$disconnect();
+    process.exit(0);
+  });
+}

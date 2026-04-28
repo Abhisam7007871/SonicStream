@@ -21,7 +21,7 @@ export default function AuthOverlay() {
     setLoading(true);
 
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
     try {
       const res = await fetch(`${API_BASE}${endpoint}`, {
