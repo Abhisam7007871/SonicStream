@@ -302,42 +302,6 @@ export default function Home() {
 
   return (
     <div className={styles.home}>
-      {/* Hero Section */}
-      <section className={styles.hero}>
-        <div className={styles.heroContent}>
-          <span className={styles.badge}>
-            <Sparkles size={14} style={{ marginRight: '8px' }} />
-            Your Music, Your Way
-          </span>
-          <h1 className={styles.heroTitle}>Discover Your <br />Perfect Sound</h1>
-          <p className={styles.heroDescription}>
-            Millions of songs at your fingertips. Stream trending tracks,
-            explore new genres, and build your personal collection.
-          </p>
-          <div className={styles.heroActions}>
-            <button
-              className={styles.primaryButton}
-              onClick={() => {
-                // Play from local songs based on what's available
-                if (trending.length > 0) {
-                  const shuffled = [...trending].sort(() => Math.random() - 0.5);
-                  setQueue(shuffled);
-                  handlePlay(shuffled[0], shuffled);
-                }
-              }}
-            >
-              <Play size={24} fill="currentColor" />
-              <span>Listen Now</span>
-            </button>
-            <button className={styles.secondaryButton} onClick={() => setBrowseGenres(true)}>
-              <Globe size={20} />
-              <span>Browse All</span>
-            </button>
-          </div>
-        </div>
-      </section>
-
-
       {/* Trending Tracks */}
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
