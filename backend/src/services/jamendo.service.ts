@@ -351,6 +351,65 @@ export async function getFeeds(limit: number = 5): Promise<any[]> {
 }
 
 /**
+ * Get similar tracks to a given track.
+ */
+export async function getSimilarTracks(
+  trackId: string,
+  limit: number = 10
+): Promise<JamendoTrack[]> {
+  const data = await jamendoGet('/tracks/similar', {
+    id: trackId,
+    limit,
+    audioformat: 'ogg',
+    imagesize: 300,
+  });
+  return (data.results || []).map(normalizeTrack);
+}
+
+/**
+ * Get playlists by name search.
+ */
+export async function searchPlaylists(
+  query: string,
+  limit: number = 10
+): Promise<any[]> {
+  const data = await jamendoGet('/playlists', {
+    namesearch: query,
+    limit,
+  });
+  return data.results || [];
+}
+
+/**
+ * Get tracks from a playlist.
+ */
+export async function getPlaylistTracks(
+  playlistId: string,
+  limit: number = 50
+): Promise<JamendoTrack[]> {
+  const data = await jamendoGet('/playlists/tracks', {
+    id: playlistId,
+    limit,
+    audioformat: 'ogg',
+    imagesize: 300,
+    track_type: 'single+albumtrack',
+  });
+  if (!data.results?.[0]?.tracks) return [];
+  return data.results[0].tracks.map(normalizeTrack);
+}
+
+/**
+ * Get available radios.
+ */
+export async function getRadios(): Promise<any[]> {
+  const data = await jamendoGet('/radios', {
+    limit: 200,
+    imagesize: 150,
+  });
+  return data.results || [];
+}
+
+/**
  * Available genre tags that work well with Jamendo.
  */
 export const JAMENDO_GENRES = [

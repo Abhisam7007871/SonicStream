@@ -29,7 +29,7 @@ export default function SearchPage() {
   const [activeShow, setActiveShow] = useState<any>(null);
   const [episodes, setEpisodes] = useState<any[]>([]);
 
-  // Faster debounce (300ms instead of 500ms)
+  // Faster debounce (300ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
@@ -44,7 +44,7 @@ export default function SearchPage() {
     setActiveShow(null);
   }, [activeTab]);
 
-  // Fetch logic - unified music search using Jamendo (fast direct CDN streams)
+  // Fetch logic
   useEffect(() => {
     const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
     const controller = new AbortController();
@@ -71,7 +71,13 @@ export default function SearchPage() {
     }
     else if (activeTab === 'Podcasts') {
       setLoading(true);
-      fetch(`${API_BASE}/api/podcasts/indian`, { signal: controller.signal })
+      // If there's a search query, search for podcasts. Otherwise show popular ones.
+      const searchQuery = debouncedQuery.trim();
+      const endpoint = searchQuery
+        ? `${API_BASE}/api/podcasts/search?q=${encodeURIComponent(searchQuery)}&limit=20`
+        : `${API_BASE}/api/podcasts/search?q=top+podcasts&limit=20`;
+      
+      fetch(endpoint, { signal: controller.signal })
         .then(r => r.json())
         .then(data => { 
           setShows(data.shows || []); 
@@ -103,7 +109,7 @@ export default function SearchPage() {
 
   const totalPages = Math.ceil(total / LIMIT);
 
-  const { toggleLike, isInLibrary } = useLibraryStore();
+  const { isInLibrary } = useLibraryStore();
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   return (
@@ -203,14 +209,15 @@ export default function SearchPage() {
       {/* Podcasts - Show List */}
       {activeTab === 'Podcasts' && !activeShow && (
         <div className={styles.grid}>
-          {loading ? <div className={styles.loading}>Loading Podcasts...</div> : shows.length > 0 ? shows.map((show, idx) => (
-            <div key={idx} className={styles.categoryCard} onClick={() => loadPodcastFeed(show.feedUrl, show)}>
-              {show.cover && <img src={show.cover} className={styles.cardImagePlaceholder} alt="" />}
+          {loading ? <div className={styles.loading}>Searching podcasts...</div> : shows.length > 0 ? shows.map((show, idx) => (
+            <div key={show.id || idx} className={styles.categoryCard} onClick={() => loadPodcastFeed(show.feedUrl, show)}>
+              {show.cover && <img src={show.cover} className={styles.cardImagePlaceholder} alt="" style={{ width: '100%', borderRadius: 8, objectFit: 'cover' }} />}
               <h3 className={styles.categoryTitle}>{show.title}</h3>
               <p className={styles.categoryAuthor}>{show.author}</p>
+              {show.genre && <p style={{ fontSize: '0.7rem', color: '#888', marginTop: 4 }}>{show.genre}</p>}
             </div>
           )) : (
-            <div className={styles.noResults}>No podcasts available.</div>
+            <div className={styles.noResults}>No podcasts found. Try searching for a podcast name.</div>
           )}
         </div>
       )}
@@ -221,17 +228,27 @@ export default function SearchPage() {
           <button onClick={() => setActiveShow(null)} className={styles.backBtn}>
             ← Back to Shows
           </button>
-          {loading ? <div className={styles.loading}>Loading Episodes...</div> : episodes.map(ep => (
-            <div key={ep.id} className={styles.songRow} onClick={() => setCurrentTrack({...ep, url: ep.streamUrl})}>
+          {loading ? <div className={styles.loading}>Loading Episodes...</div> : episodes.length > 0 ? episodes.map(ep => (
+            <div key={ep.id} className={styles.songRow} onClick={() => setCurrentTrack({
+              id: ep.id,
+              title: ep.title,
+              artist: activeShow.author || ep.author || 'Podcast',
+              cover: ep.cover || activeShow.cover || '',
+              albumArt: ep.cover || activeShow.cover || '',
+              url: ep.streamUrl || ep.url || '',
+              source: 'internal' as const,
+            })}>
               <div className={styles.songMain}>
-                <img src={ep.cover} alt="" className={styles.songArt} style={{ objectFit: 'cover' }} />
+                <img src={ep.cover || activeShow.cover || ''} alt="" className={styles.songArt} style={{ objectFit: 'cover' }} />
                 <div className={styles.songMeta}>
                   <span className={styles.songName}>{ep.title}</span>
-                  <span className={styles.songArtist}>{new Date(ep.pubDate).toLocaleDateString()}</span>
+                  <span className={styles.songArtist}>{ep.pubDate ? new Date(ep.pubDate).toLocaleDateString() : activeShow.author}</span>
                 </div>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className={styles.noResults}>No episodes found for this podcast.</div>
+          )}
         </div>
       )}
     </div>

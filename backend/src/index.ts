@@ -162,6 +162,7 @@ import * as ia from './services/archive.service';
 import { searchAllSources } from './services/freeMusic.service';
 import { parseFeed, INDIAN_PODCASTS } from './services/rss.service';
 import * as jamendo from './services/jamendo.service';
+import { searchPodcasts, getTopPodcasts } from './services/podcast.service';
 
 // YouTube Audio Stream Proxy Component
 // Takes iTunes metadata and returns a full native stream
@@ -283,6 +284,31 @@ app.get('/api/podcasts/feed', async (req, res) => {
 
 app.get('/api/podcasts/indian', (req, res) => {
   res.json({ shows: INDIAN_PODCASTS });
+});
+
+// Podcast Search (iTunes API - works globally)
+app.get('/api/podcasts/search', async (req, res) => {
+  try {
+    const { q, limit = 20 } = req.query;
+    if (!q) return res.status(400).json({ error: 'Query required' });
+    const shows = await searchPodcasts(q as string, Number(limit));
+    res.json({ shows, total: shows.length });
+  } catch (err: any) {
+    console.error('Podcast search error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Top Podcasts
+app.get('/api/podcasts/top', async (req, res) => {
+  try {
+    const { limit = 20, country = 'us' } = req.query;
+    const shows = await getTopPodcasts(Number(limit), country as string);
+    res.json({ shows, total: shows.length });
+  } catch (err: any) {
+    console.error('Top podcasts error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Unified Free Music Search (ccMixter, FMA, Musopen, etc.)
