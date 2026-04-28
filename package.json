@@ -8,10 +8,11 @@
     "dev:backend": "cd backend && npm run dev",
     "build:backend": "cd backend && npx tsc --project tsconfig.json --noEmit false --skipLibCheck true 2>&1; true",
     "build:next": "next build",
-    "build": "npm run build:backend && npm run build:next",
+    "build": "npm run prisma:generate && npm run build:backend && npm run build:next",
     "start": "NODE_ENV=production node server.js",
     "lint": "eslint",
-    "postinstall": "cd backend && npm install && npx prisma generate"
+    "prisma:generate": "cd backend && npx prisma generate --schema=prisma/schema.prisma",
+    "postinstall": "cd backend && npm install"
   },
   "dependencies": {
     "@types/howler": "^2.2.12",

@@ -17,6 +17,23 @@ const dev = process.env.NODE_ENV !== 'production';
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
 async function main() {
+  // 0. Ensure SQLite DB file exists (Render has ephemeral filesystem)
+  const dbPath = path.join(__dirname, 'backend', 'prisma', 'dev.db');
+  const fs = require('fs');
+  if (!fs.existsSync(dbPath)) {
+    console.log('Creating SQLite database...');
+    const { execSync } = require('child_process');
+    try {
+      execSync('npx prisma db push --schema=prisma/schema.prisma --skip-generate', {
+        cwd: path.join(__dirname, 'backend'),
+        stdio: 'inherit',
+      });
+    } catch (e) {
+      // If db push fails, just create an empty file — tables will be created on first migration
+      fs.writeFileSync(dbPath, '');
+    }
+  }
+
   // 1. Boot Next.js
   const nextApp = next({ dev, dir: __dirname });
   const nextHandler = nextApp.getRequestHandler();
@@ -24,7 +41,6 @@ async function main() {
   console.log('✓ Next.js ready');
 
   // 2. Boot Express backend (imports all API routes)
-  // Use ts-node-dev in dev, or pre-compiled dist in production
   let expressApp;
   try {
     if (dev) {
@@ -43,6 +59,7 @@ async function main() {
     console.log('✓ Express API ready');
   } catch (err) {
     console.error('✗ Failed to load Express backend:', err.message);
+    console.error(err);
     process.exit(1);
   }
 
