@@ -82,7 +82,7 @@ app.get('/api/youtube/search', async (req, res) => {
   }
 });
 
-// Browse by language
+// Browse by language — uses YouTube for FULL songs (not 30s iTunes previews)
 app.get('/api/music/language/:lang', async (req, res) => {
   const lang = req.params.lang.toLowerCase() as keyof typeof LANGUAGE_SEARCHES;
   const terms = LANGUAGE_SEARCHES[lang];
@@ -92,10 +92,10 @@ app.get('/api/music/language/:lang', async (req, res) => {
   }
 
   try {
-    // Fetch from first 2 search terms and merge results
+    // Fetch from first 2 search terms via YouTube and merge results
     const [a, b] = await Promise.all([
-      searchItunes(terms[0], 15),
-      searchItunes(terms[1], 15),
+      searchYouTube(terms[0] as string, 15),
+      searchYouTube(terms[1] as string, 15),
     ]);
     const all = [...a, ...b];
     // Remove duplicates
@@ -111,14 +111,14 @@ app.get('/api/music/language/:lang', async (req, res) => {
   }
 });
 
-// Trending — pulls from all 4 languages
+// Trending — uses YouTube for FULL songs (not 30s iTunes previews)
 app.get('/api/music/trending', async (req, res) => {
   try {
     const [hindi, punjabi, korean, english] = await Promise.all([
-      searchItunes('hindi hits 2024', 6),
-      searchItunes('punjabi hits 2024', 6),
-      searchItunes('kpop 2024', 6),
-      searchItunes('pop hits 2024', 6),
+      searchYouTube('hindi hits 2024', 8),
+      searchYouTube('punjabi hits 2024', 8),
+      searchYouTube('kpop 2024', 8),
+      searchYouTube('pop hits 2024', 8),
     ]);
     const results = [...hindi, ...punjabi, ...korean, ...english];
     res.json({ total: results.length, results });
