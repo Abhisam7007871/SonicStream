@@ -53,6 +53,63 @@ app.use('/api/auth', authRoutes);
 import { searchItunes, LANGUAGE_SEARCHES } from './services/itunes.service';
 
 // ─────────────────────────────────────────────
+//  RESPONSE CACHE — avoids slow YouTube re-fetches
+// ─────────────────────────────────────────────
+const responseCache = new Map<string, { data: any; ts: number }>();
+const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+function getCached(key: string): any | null {
+  const entry = responseCache.get(key);
+  if (entry && Date.now() - entry.ts < CACHE_TTL_MS) return entry.data;
+  return null;
+}
+
+function setCache(key: string, data: any): void {
+  responseCache.set(key, { data, ts: Date.now() });
+  // Evict old entries if cache grows too large
+  if (responseCache.size > 200) {
+    const oldest = [...responseCache.entries()].sort((a, b) => a[1].ts - b[1].ts);
+    for (let i = 0; i < 50; i++) responseCache.delete(oldest[i][0]);
+  }
+}
+
+// Helper: race YouTube search against a timeout, fallback to iTunes
+async function fastYouTubeSearch(query: string, limit: number): Promise<any[]> {
+  const cacheKey = `yt:${query}:${limit}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    console.log(`[Cache] HIT for "${query}"`);
+    return cached;
+  }
+
+  try {
+    // 8 second timeout for YouTube search
+    const results = await Promise.race([
+      searchYouTube(query, limit),
+      new Promise<any[]>((_, reject) => setTimeout(() => reject(new Error('YT timeout')), 8000)),
+    ]);
+    if (results.length > 0) {
+      setCache(cacheKey, results);
+      return results;
+    }
+  } catch (e: any) {
+    console.log(`[FastSearch] YouTube failed for "${query}": ${e.message}`);
+  }
+
+  // Fallback to iTunes
+  console.log(`[FastSearch] Falling back to iTunes for "${query}"`);
+  try {
+    const itunesResults = await searchItunes(query, limit);
+    if (itunesResults.length > 0) {
+      setCache(cacheKey, itunesResults);
+    }
+    return itunesResults;
+  } catch {
+    return [];
+  }
+}
+
+// ─────────────────────────────────────────────
 //  MUSIC ROUTES (powered by iTunes Search API)
 // ─────────────────────────────────────────────
 
@@ -69,13 +126,13 @@ app.get('/api/music/search', async (req, res) => {
   }
 });
 
-// YouTube Direct Search
+// YouTube Direct Search (with cache + timeout + iTunes fallback)
 app.get('/api/youtube/search', async (req, res) => {
   const { q, limit } = req.query as { q?: string; limit?: string };
   const term = q || 'top hits 2024';
   const numLimit = Math.min(Number(limit) || 50, 100);
   try {
-    const results = await searchYouTube(term, numLimit);
+    const results = await fastYouTubeSearch(term, numLimit);
     res.json({ query: term, total: results.length, results });
   } catch (err: any) {
     console.error('YouTube Search error:', err.message);
@@ -93,22 +150,12 @@ app.get('/api/music/language/:lang', async (req, res) => {
   }
 
   try {
-    // Fetch from first 2 search terms via YouTube and merge results
+    // Use fastYouTubeSearch (cached + timeout + iTunes fallback)
     const [a, b] = await Promise.all([
-      searchYouTube(terms[0] as string, 15).catch(() => []),
-      searchYouTube(terms[1] as string, 15).catch(() => []),
+      fastYouTubeSearch(terms[0] as string, 15),
+      fastYouTubeSearch(terms[1] as string, 15),
     ]);
     let all = [...a, ...b];
-    
-    // Fallback to iTunes if YouTube returns nothing
-    if (all.length === 0) {
-      console.log(`[Language] YouTube returned 0 for ${lang}, falling back to iTunes`);
-      const [ia, ib] = await Promise.all([
-        searchItunes(terms[0] as string, 15).catch(() => []),
-        searchItunes(terms[1] as string, 15).catch(() => []),
-      ]);
-      all = [...ia, ...ib];
-    }
     
     // Remove duplicates
     const seen = new Set<string>();
@@ -123,29 +170,16 @@ app.get('/api/music/language/:lang', async (req, res) => {
   }
 });
 
-// Trending — uses YouTube for FULL songs, falls back to iTunes if YT fails
+// Trending — cached + timeout + iTunes fallback
 app.get('/api/music/trending', async (req, res) => {
   try {
     const [hindi, punjabi, korean, english] = await Promise.all([
-      searchYouTube('hindi hits 2024', 8).catch(() => []),
-      searchYouTube('punjabi hits 2024', 8).catch(() => []),
-      searchYouTube('kpop 2024', 8).catch(() => []),
-      searchYouTube('pop hits 2024', 8).catch(() => []),
+      fastYouTubeSearch('hindi hits 2024', 8),
+      fastYouTubeSearch('punjabi hits 2024', 8),
+      fastYouTubeSearch('kpop 2024', 8),
+      fastYouTubeSearch('pop hits 2024', 8),
     ]);
-    let results = [...hindi, ...punjabi, ...korean, ...english];
-    
-    // Fallback to iTunes if YouTube returns nothing
-    if (results.length === 0) {
-      console.log('[Trending] YouTube returned 0 results, falling back to iTunes');
-      const [h, p, k, e] = await Promise.all([
-        searchItunes('hindi hits 2024', 8).catch(() => []),
-        searchItunes('punjabi hits 2024', 8).catch(() => []),
-        searchItunes('kpop 2024', 8).catch(() => []),
-        searchItunes('pop hits 2024', 8).catch(() => []),
-      ]);
-      results = [...h, ...p, ...k, ...e];
-    }
-    
+    const results = [...hindi, ...punjabi, ...korean, ...english];
     res.json({ total: results.length, results });
   } catch (err: any) {
     console.error('Trending error:', err.message);
