@@ -52,6 +52,7 @@ export default function Player() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const silentAudioRef = useRef<HTMLAudioElement>(null);
   const ytPlayerRef = useRef<any>(null);
   const ytContainerRef = useRef<HTMLDivElement>(null);
   const ytIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -167,6 +168,16 @@ export default function Player() {
     }
     return () => { if (ytIntervalRef.current) clearInterval(ytIntervalRef.current); };
   }, [isYT, isPlaying, ytReady]);
+
+  // ── Silent audio keepalive — prevents browser from throttling YT in background ──
+  useEffect(() => {
+    if (!silentAudioRef.current) return;
+    if (isYT && isPlaying) {
+      silentAudioRef.current.play().catch(() => {});
+    } else if (!isYT || !isPlaying) {
+      silentAudioRef.current.pause();
+    }
+  }, [isYT, isPlaying]);
 
   // ── Native <audio> sync (for non-YouTube tracks) ────────────────────
   useEffect(() => {
@@ -288,6 +299,15 @@ export default function Player() {
           preload="auto"
         />
       )}
+
+      {/* Silent audio keepalive - keeps browser audio pipeline active for YT background playback */}
+      <audio
+        ref={silentAudioRef}
+        src="/silence.wav"
+        loop
+        playsInline
+        style={{ display: 'none' }}
+      />
 
       {/* YouTube Player - hidden (1x1px, opacity 0.01) */}
       <div style={{ 
