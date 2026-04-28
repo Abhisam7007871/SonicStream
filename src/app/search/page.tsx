@@ -5,7 +5,7 @@ import styles from './page.module.css';
 import { useSearchStore } from '@/store/useSearchStore';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import { useHydratedLibraryStore as useLibraryStore } from '@/store/useLibraryStore';
-import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, ListPlus, MoreHorizontal } from 'lucide-react';
 import TrackOptionsMenu from '@/components/TrackOptionsMenu';
 
 const TABS = ['Music', 'Podcasts'];
@@ -29,12 +29,12 @@ export default function SearchPage() {
   const [activeShow, setActiveShow] = useState<any>(null);
   const [episodes, setEpisodes] = useState<any[]>([]);
 
-  // Faster debounce (300ms)
+  // Fast debounce (150ms)
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
       setPage(1);
-    }, 300);
+    }, 150);
     return () => clearTimeout(timer);
   }, [query]);
 

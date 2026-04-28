@@ -337,26 +337,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Quick Access Grid — functional mood playlists */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Welcome Back</h2>
-        <div className={styles.grid}>
-          {QUICK_MIXES.map((mix) => (
-            <div key={mix.id} className={styles.playlistCard} onClick={() => handleQuickMix(mix)} style={{ cursor: 'pointer' }}>
-              <div
-                className={styles.cardGradient}
-                style={{ background: `linear-gradient(135deg, ${mix.color}, #0a0a0c)` }}
-              />
-              <h3 className={styles.cardTitle}>
-                {mixLoading === mix.id ? '⏳ Loading...' : mix.title}
-              </h3>
-              <button className={styles.cardPlayButton}>
-                <Play size={24} fill="black" />
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* Trending Tracks */}
       <section className={styles.section}>

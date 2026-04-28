@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import styles from './Sidebar.module.css';
 import { Home, Search, Library, PlusSquare, Heart, Music2, Mic2 } from 'lucide-react';
 import Link from 'next/link';
@@ -9,7 +10,9 @@ import { useHydratedLibraryStore as useLibraryStore } from '@/store/useLibrarySt
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { playlists } = useLibraryStore();
+  const { playlists, createPlaylist } = useLibraryStore();
+  const [showInput, setShowInput] = useState(false);
+  const [playlistName, setPlaylistName] = useState('');
 
   const navItems = [
     { href: '/', icon: <Home size={20} />, label: 'Home' },
@@ -40,10 +43,51 @@ export default function Sidebar() {
 
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>Playlists</h3>
-          <button className={styles.navLink}>
-            <PlusSquare size={20} />
-            <span>Create Playlist</span>
-          </button>
+          {showInput ? (
+            <div style={{ display: 'flex', gap: 4, padding: '4px 12px' }}>
+              <input
+                autoFocus
+                type="text"
+                value={playlistName}
+                onChange={(e) => setPlaylistName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && playlistName.trim()) {
+                    createPlaylist(playlistName.trim());
+                    setPlaylistName('');
+                    setShowInput(false);
+                  }
+                  if (e.key === 'Escape') {
+                    setShowInput(false);
+                    setPlaylistName('');
+                  }
+                }}
+                onBlur={() => {
+                  if (playlistName.trim()) {
+                    createPlaylist(playlistName.trim());
+                  }
+                  setPlaylistName('');
+                  setShowInput(false);
+                }}
+                placeholder="Playlist name..."
+                style={{
+                  flex: 1,
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: 6,
+                  padding: '6px 8px',
+                  fontSize: '0.8rem',
+                  color: 'white',
+                  outline: 'none',
+                  minWidth: 0,
+                }}
+              />
+            </div>
+          ) : (
+            <button className={styles.navLink} onClick={() => setShowInput(true)}>
+              <PlusSquare size={20} />
+              <span>Create Playlist</span>
+            </button>
+          )}
           <Link 
             href="/playlist/liked-songs" 
             className={`${styles.navLink} ${pathname === '/playlist/liked-songs' ? styles.active : ''}`}
