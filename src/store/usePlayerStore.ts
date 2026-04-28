@@ -58,17 +58,17 @@ function resolveStreamUrl(track: Track): string {
   const rawUrl = track.url || (track as any).streamUrl || '';
 
   if (track.source === 'youtube') {
-    // The video id may come as the `id` field or embedded in the url
+    // Pass YouTube URL directly — ReactPlayer handles it natively
     const videoId = String(track.id).startsWith('http')
       ? new URLSearchParams(new URL(String(track.id)).search).get('v') || String(track.id)
       : String(track.id);
     
-    // Add a dummy extension to help ReactPlayer/Browsers detect the mime type
-    return `${API_BASE}/api/youtube/stream?id=${videoId}&ext=.webm`;
+    return `https://www.youtube.com/watch?v=${videoId}`;
   }
 
-  // For iTunes the previewUrl is a 30-sec Apple-CDN .m4a — use it directly.
-  // For archive / podcast the url is already a direct mp3/ogg.
+  // For Jamendo — direct CDN URL plays instantly
+  // For iTunes — 30-sec Apple-CDN .m4a preview
+  // For archive / podcast — direct mp3/ogg
   return rawUrl;
 }
 

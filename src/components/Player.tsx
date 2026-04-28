@@ -1,58 +1,68 @@
 "use client";
 
 import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import styles from './Player.module.css';
 import {
   Play, Pause, SkipBack, SkipForward, Repeat, Shuffle,
-  Volume2, Volume1, VolumeX, Maximize2, ListMusic, Mic2, MonitorSpeaker,
-  MoreHorizontal, RotateCcw, RotateCw, Plus, Minus
+  Volume2, Volume1, VolumeX, ListMusic, Mic2, MonitorSpeaker,
 } from 'lucide-react';
 import { usePlayerStore } from '@/store/usePlayerStore';
 import QualitySelector from './QualitySelector';
 
+// Dynamically import ReactPlayer (client-only, no SSR)
+const ReactPlayer = dynamic(() => import('react-player').then(mod => mod.default || mod) as any, { ssr: false }) as any;
+
+function isYouTubeUrl(url: string): boolean {
+  return url.includes('youtube.com/watch') || url.includes('youtu.be/');
+}
+
 export default function Player() {
   const {
     currentTrack, isPlaying, volume, progress, duration,
-    togglePlay, setVolume, setProgress, updateProgress,
+    togglePlay, setVolume, setProgress,
     playNext, playPrevious,
     isShuffle, isRepeat, toggleShuffle, toggleRepeat,
-    seekForward, seekBackward, increaseVolume, decreaseVolume,
     setDuration
   } = usePlayerStore();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const reactPlayerRef = useRef<any>(null);
 
-  // Sync isPlaying state with native audio element
+  const trackUrl = currentTrack?.url || '';
+  const isYT = isYouTubeUrl(trackUrl);
+
+  // ─── Native <audio> sync (for non-YouTube tracks) ───
   useEffect(() => {
-    if (!audioRef.current) return;
+    if (isYT || !audioRef.current) return;
 
     if (isPlaying) {
       const playPromise = audioRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch(error => {
-          console.error('[Audio] Playback interrupted or blocked:', error);
+        playPromise.catch(err => {
+          console.error('[Audio] Playback interrupted:', err);
         });
       }
     } else {
       audioRef.current.pause();
     }
-  }, [isPlaying, currentTrack?.url]);
+  }, [isPlaying, trackUrl, isYT]);
 
-  // Sync volume
+  // Sync volume to <audio>
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
   }, [volume]);
 
-  // Sync seek
+  // Sync seek to <audio>
   useEffect(() => {
-    if (audioRef.current && Math.abs(audioRef.current.currentTime - progress) > 2) {
+    if (!isYT && audioRef.current && Math.abs(audioRef.current.currentTime - progress) > 2) {
       audioRef.current.currentTime = progress;
     }
-  }, [progress]);
+  }, [progress, isYT]);
 
   const formatTime = (time: number) => {
     if (isNaN(time) || time === 0) return "0:00";
@@ -61,10 +71,10 @@ export default function Player() {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  // ─── <audio> event handlers ───
   const handleTimeUpdate = () => {
     if (audioRef.current) {
-      const current = audioRef.current.currentTime;
-      setProgress(current);
+      setProgress(audioRef.current.currentTime);
     }
   };
 
@@ -78,7 +88,9 @@ export default function Player() {
 
   const handleEnded = () => {
     if (isRepeat) {
-      if (audioRef.current) {
+      if (isYT && reactPlayerRef.current) {
+        reactPlayerRef.current.seekTo(0);
+      } else if (audioRef.current) {
         audioRef.current.currentTime = 0;
         audioRef.current.play();
       }
@@ -88,14 +100,42 @@ export default function Player() {
   };
 
   const handleError = (e: any) => {
-    console.warn('[Audio] Playback error details:', e);
+    console.warn('[Audio] Playback error:', e);
     if (currentTrack?.url) {
-      setError('Playback error — retrying...');
-      // If it's a source error, try to re-resolve or just skip
-      setTimeout(() => { 
-        setError(null); 
-        playNext(); 
+      setError('Playback error — skipping...');
+      setTimeout(() => {
+        setError(null);
+        playNext();
       }, 3000);
+    }
+  };
+
+  // ─── ReactPlayer event handlers (YouTube) ───
+  const handleYTProgress = (state: { playedSeconds: number }) => {
+    setProgress(state.playedSeconds);
+  };
+
+  const handleYTDuration = (dur: number) => {
+    setDuration(dur);
+    setIsLoading(false);
+    setError(null);
+  };
+
+  const handleYTError = (e: any) => {
+    console.warn('[YouTube] Playback error:', e);
+    setError('Video unavailable — skipping...');
+    setTimeout(() => {
+      setError(null);
+      playNext();
+    }, 3000);
+  };
+
+  const handleSeek = (val: number) => {
+    setProgress(val);
+    if (isYT && reactPlayerRef.current) {
+      reactPlayerRef.current.seekTo(val);
+    } else if (audioRef.current) {
+      audioRef.current.currentTime = val;
     }
   };
 
@@ -104,19 +144,53 @@ export default function Player() {
 
   return (
     <>
-      <audio
-        key={currentTrack?.id || 'none'}
-        ref={audioRef}
-        src={currentTrack?.url || ''}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleEnded}
-        onError={handleError}
-        onWaiting={() => setIsLoading(true)}
-        onPlaying={() => setIsLoading(false)}
-        crossOrigin="anonymous"
-        preload="auto"
-      />
+      {/* Native <audio> for non-YouTube sources (Jamendo, iTunes, podcasts, etc.) */}
+      {!isYT && (
+        <audio
+          key={currentTrack?.id || 'none'}
+          ref={audioRef}
+          src={trackUrl}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={handleEnded}
+          onError={handleError}
+          onWaiting={() => setIsLoading(true)}
+          onPlaying={() => setIsLoading(false)}
+          crossOrigin="anonymous"
+          preload="auto"
+        />
+      )}
+
+      {/* ReactPlayer for YouTube — hidden (audio only, no video visible) */}
+      {isYT && (
+        <div style={{ position: 'fixed', top: -9999, left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
+          <ReactPlayer
+            ref={reactPlayerRef}
+            url={trackUrl}
+            playing={isPlaying}
+            volume={volume}
+            onProgress={handleYTProgress as any}
+            onDuration={handleYTDuration as any}
+            onEnded={handleEnded}
+            onError={handleYTError as any}
+            onBuffer={() => setIsLoading(true)}
+            onBufferEnd={() => setIsLoading(false)}
+            onReady={() => { setIsLoading(false); setError(null); }}
+            width={1}
+            height={1}
+            config={{
+              youtube: {
+                embedOptions: {
+                  autoplay: 1,
+                  controls: 0,
+                  modestbranding: 1,
+                  rel: 0,
+                },
+              },
+            } as any}
+          />
+        </div>
+      )}
 
       <footer
         className={styles.player}
@@ -137,7 +211,6 @@ export default function Player() {
                 <h4 className={styles.title}>{currentTrack.title}</h4>
                 <p className={styles.artist}>
                   {currentTrack.artist}
-                  {/* Jamendo ToS Clause 4.1: Attribution — credit artist + Jamendo + backlink */}
                   {(currentTrack as any).source === 'jamendo' && (currentTrack as any).shareUrl && (
                     <a
                       href={(currentTrack as any).shareUrl}
@@ -197,11 +270,7 @@ export default function Player() {
                 max={duration || 100}
                 value={progress}
                 step={0.1}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setProgress(val);
-                  if (audioRef.current) audioRef.current.currentTime = val;
-                }}
+                onChange={(e) => handleSeek(parseFloat(e.target.value))}
                 className={styles.progressBar}
               />
             </div>
@@ -235,7 +304,6 @@ export default function Player() {
               {volume === 0 ? <VolumeX size={18} /> : volume < 0.5 ? <Volume1 size={18} /> : <Volume2 size={18} />}
             </button>
           </div>
-          {/* <button className={styles.iconBtn}><Maximize2 size={18} /></button> */}
         </div>
       </footer>
     </>
