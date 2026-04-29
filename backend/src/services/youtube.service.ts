@@ -393,8 +393,9 @@ export async function searchYouTube(query: string, limit: number = 50) {
       id: v.videoId,
       title: cleanTitle(v.title),
       artist: cleanArtist(v.author.name, v.title),
-      cover: v.thumbnail,
-      albumArt: v.thumbnail,
+      // Proxy thumbnails through Piped to avoid i.ytimg.com DNS block
+      cover: `https://pipedproxy.kavin.rocks/vi/${v.videoId}/hq720.jpg`,
+      albumArt: `https://pipedproxy.kavin.rocks/vi/${v.videoId}/hq720.jpg`,
       source: 'youtube',
       url: v.url,
     }));
