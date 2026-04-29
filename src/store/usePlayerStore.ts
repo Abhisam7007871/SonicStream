@@ -49,47 +49,33 @@ interface PlayerState {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Piped instances for frontend audio resolution (no youtube.com needed)
-const PIPED_INSTANCES = [
-  'https://pipedapi.kavin.rocks',
-  'https://pipedapi.tokhmi.xyz',
-  'https://pipedapi.moomoo.me',
-  'https://api.piped.yt',
-  'https://pipedapi.in.projectsegfau.lt',
-  'https://pipedapi.adminforge.de',
-];
-
-// Cache resolved Piped audio URLs (valid ~2 hours)
+// Cache resolved Piped audio URLs (valid ~90 min)
 const pipedCache = new Map<string, { url: string; ts: number }>();
 const PIPED_CACHE_TTL = 90 * 60 * 1000; // 90 min
 
 /**
- * Resolves a YouTube video ID to a direct audio URL via Piped API.
- * Tries multiple instances. Returns null if all fail.
+ * Resolves a YouTube video ID to a direct audio URL via our backend
+ * (which calls Piped API server-side — no CORS issues).
  */
 async function resolvePipedAudio(videoId: string): Promise<string | null> {
   const cached = pipedCache.get(videoId);
   if (cached && Date.now() - cached.ts < PIPED_CACHE_TTL) return cached.url;
 
-  for (const instance of PIPED_INSTANCES) {
-    try {
-      const res = await fetch(`${instance}/streams/${videoId}`, {
-        signal: AbortSignal.timeout(8000),
-        headers: { 'Accept': 'application/json' },
-      });
-      if (!res.ok) continue;
+  try {
+    console.log(`[Piped] Resolving ${videoId} via backend proxy...`);
+    const res = await fetch(`${API_BASE}/api/youtube/piped-resolve?id=${videoId}`, {
+      signal: AbortSignal.timeout(30000),
+    });
+    if (res.ok) {
       const data = await res.json();
-      const streams: any[] = data.audioStreams || [];
-      if (streams.length > 0) {
-        // Pick highest bitrate
-        streams.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
-        const url = streams[0].url;
-        pipedCache.set(videoId, { url, ts: Date.now() });
-        console.log(`[Piped] ✓ Resolved ${videoId} via ${instance}`);
-        return url;
+      if (data.url) {
+        pipedCache.set(videoId, { url: data.url, ts: Date.now() });
+        console.log(`[Piped] ✓ Resolved ${videoId} via backend (${data.instance})`);
+        return data.url;
       }
-    } catch (e: any) {
-      console.log(`[Piped] ${instance} failed: ${e.message}`);
     }
+  } catch (e: any) {
+    console.log(`[Piped] Backend resolve failed: ${e.message}`);
   }
   return null;
 }

@@ -243,6 +243,47 @@ app.get('/api/music/stream', async (req, res) => {
   }
 });
 
+// YouTube Piped Resolve — returns a direct CDN audio URL (no CORS issue server-side)
+app.get('/api/youtube/piped-resolve', async (req, res) => {
+  const { id } = req.query as { id: string };
+  if (!id) return res.status(400).json({ error: 'Missing video id' });
+
+  console.log(`[Piped-Resolve] Request for video: ${id}`);
+
+  const pipedInstances = [
+    'https://pipedapi.kavin.rocks',
+    'https://pipedapi.tokhmi.xyz',
+    'https://pipedapi.moomoo.me',
+    'https://pipedapi.in.projectsegfau.lt',
+    'https://pipedapi.adminforge.de',
+    'https://watchapi.whatever.social',
+  ];
+
+  for (const instance of pipedInstances) {
+    try {
+      console.log(`[Piped-Resolve] Trying ${instance}`);
+      const apiRes = await fetch(`${instance}/streams/${id}`, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        signal: AbortSignal.timeout(10000) as any,
+      });
+      if (!apiRes.ok) continue;
+      const data = await apiRes.json() as any;
+      const streams: any[] = data.audioStreams || [];
+      if (streams.length > 0) {
+        streams.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+        const url = streams[0].url;
+        console.log(`[Piped-Resolve] ✓ Success via ${instance}`);
+        return res.json({ url, instance });
+      }
+    } catch (e: any) {
+      console.log(`[Piped-Resolve] ${instance} failed: ${e.message}`);
+    }
+  }
+
+  console.error(`[Piped-Resolve] All instances failed for ${id}`);
+  return res.status(503).json({ error: 'All Piped instances failed' });
+});
+
 // YouTube Direct Stream Proxy — resolves to a CDN audio URL and pipes it
 app.get('/api/youtube/stream', async (req, res) => {
   const { id } = req.query as { id: string };
