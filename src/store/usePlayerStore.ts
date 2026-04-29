@@ -48,24 +48,70 @@ interface PlayerState {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
+// Piped instances for frontend audio resolution (no youtube.com needed)
+const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.tokhmi.xyz',
+  'https://pipedapi.moomoo.me',
+  'https://api.piped.yt',
+  'https://pipedapi.in.projectsegfau.lt',
+  'https://pipedapi.adminforge.de',
+];
+
+// Cache resolved Piped audio URLs (valid ~2 hours)
+const pipedCache = new Map<string, { url: string; ts: number }>();
+const PIPED_CACHE_TTL = 90 * 60 * 1000; // 90 min
+
+/**
+ * Resolves a YouTube video ID to a direct audio URL via Piped API.
+ * Tries multiple instances. Returns null if all fail.
+ */
+async function resolvePipedAudio(videoId: string): Promise<string | null> {
+  const cached = pipedCache.get(videoId);
+  if (cached && Date.now() - cached.ts < PIPED_CACHE_TTL) return cached.url;
+
+  for (const instance of PIPED_INSTANCES) {
+    try {
+      const res = await fetch(`${instance}/streams/${videoId}`, {
+        signal: AbortSignal.timeout(8000),
+        headers: { 'Accept': 'application/json' },
+      });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const streams: any[] = data.audioStreams || [];
+      if (streams.length > 0) {
+        // Pick highest bitrate
+        streams.sort((a: any, b: any) => (b.bitrate || 0) - (a.bitrate || 0));
+        const url = streams[0].url;
+        pipedCache.set(videoId, { url, ts: Date.now() });
+        console.log(`[Piped] ✓ Resolved ${videoId} via ${instance}`);
+        return url;
+      }
+    } catch (e: any) {
+      console.log(`[Piped] ${instance} failed: ${e.message}`);
+    }
+  }
+  return null;
+}
+
 /**
  * Resolves a track to a playable direct-audio URL.
- *
- * - youtube  → backend stream proxy `/api/youtube/stream?id=VIDEO_ID`
- *              (avoids iframe embedding issues on deployed sites)
- * - itunes   → Apple CDN .m4a preview URL  (direct, works immediately)
- * - jamendo  → direct CDN URL (plays instantly)
- * - archive / others → use url / streamUrl as-is
+ * For YouTube: uses Piped API (frontend-side, no youtube.com needed)
  */
 function resolveStreamUrl(track: Track): string {
   const rawUrl = track.url || (track as any).streamUrl || '';
 
   if (track.source === 'youtube') {
-    // Use backend stream proxy — resolves to direct CDN audio URL
+    // Return a placeholder — actual resolution happens async in setCurrentTrack
     const videoId = String(track.id).startsWith('http')
       ? new URLSearchParams(new URL(String(track.id)).search).get('v') || String(track.id)
       : String(track.id);
     
+    // Check cache first for instant playback
+    const cached = pipedCache.get(videoId);
+    if (cached && Date.now() - cached.ts < PIPED_CACHE_TTL) return cached.url;
+
+    // Fallback: use backend proxy (may work if Piped fails)
     return `${API_BASE}/api/youtube/stream?id=${videoId}`;
   }
 
@@ -98,6 +144,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       resolvedUrl: streamUrl
     });
 
+    // Set track immediately (may use cached Piped URL or backend fallback)
     set({
       currentTrack: { ...track, albumArt, url: streamUrl },
       isPlaying: true, 
@@ -105,6 +152,29 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       duration: 0,
       audiomackUrl: track.source === 'audiomack' ? track.url : null,
     });
+
+    // For YouTube: async-resolve via Piped API in background
+    // If the sync URL was already a Piped cache hit, this is a no-op
+    if (track.source === 'youtube') {
+      const videoId = String(track.id).startsWith('http')
+        ? new URLSearchParams(new URL(String(track.id)).search).get('v') || String(track.id)
+        : String(track.id);
+      
+      // Only resolve if we don't already have a cached Piped URL
+      const cached = pipedCache.get(videoId);
+      if (!cached || Date.now() - cached.ts >= PIPED_CACHE_TTL) {
+        resolvePipedAudio(videoId).then((pipedUrl) => {
+          if (pipedUrl) {
+            // Only update if this track is still the current one
+            const current = get().currentTrack;
+            if (current && String(current.id) === String(track.id)) {
+              console.log(`[Piped] ✓ Updating URL for "${track.title}"`);
+              set({ currentTrack: { ...current, url: pipedUrl } });
+            }
+          }
+        }).catch(() => {});
+      }
+    }
 
     // Track song play for analytics (non-blocking)
     trackSongPlay({

@@ -9,35 +9,13 @@ import {
 import { usePlayerStore } from '@/store/usePlayerStore';
 import QualitySelector from './QualitySelector';
 
-// ── YouTube IFrame API loader ──────────────────────────────────────────
-let ytApiLoaded = false;
-let ytApiPromise: Promise<void> | null = null;
+// ── YouTube IFrame API — DISABLED ──────────────────────────────────────
+// All YouTube tracks now use Piped direct audio URLs (no iframe needed)
+function loadYouTubeApi(): Promise<void> { return Promise.resolve(); }
 
-function loadYouTubeApi(): Promise<void> {
-  if (ytApiLoaded && (window as any).YT?.Player) return Promise.resolve();
-  if (ytApiPromise) return ytApiPromise;
-
-  ytApiPromise = new Promise<void>((resolve) => {
-    if ((window as any).YT?.Player) {
-      ytApiLoaded = true;
-      resolve();
-      return;
-    }
-    (window as any).onYouTubeIframeAPIReady = () => {
-      ytApiLoaded = true;
-      resolve();
-    };
-    const tag = document.createElement('script');
-    tag.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(tag);
-  });
-  return ytApiPromise;
-}
-
-function getYouTubeVideoId(url: string): string | null {
-  if (!url) return null;
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
-  return match ? match[1] : null;
+// Always returns null — YouTube tracks use Piped CDN URLs, not youtube.com
+function getYouTubeVideoId(_url: string): string | null {
+  return null;
 }
 
 export default function Player() {
@@ -62,58 +40,8 @@ export default function Player() {
   const ytVideoId = getYouTubeVideoId(trackUrl);
   const isYT = !!ytVideoId;
 
-  // ── Initialize YouTube Player once ───────────────────────────────────
+  // ── YouTube Player DISABLED — all YT tracks use Piped direct audio ──
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    loadYouTubeApi().then(() => {
-      if (ytPlayerRef.current) return;
-      
-      ytPlayerRef.current = new (window as any).YT.Player('yt-player-container', {
-        height: '180',
-        width: '320',
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          modestbranding: 1,
-          rel: 0,
-          playsinline: 1,
-          origin: window.location.origin,
-        },
-        events: {
-          onReady: () => {
-            console.log('[YT] Player ready');
-            setYtReady(true);
-          },
-          onStateChange: (event: any) => {
-            const state = event.data;
-            const YT = (window as any).YT.PlayerState;
-            
-            if (state === YT.PLAYING) {
-              setIsLoading(false);
-              setError(null);
-              const dur = ytPlayerRef.current?.getDuration?.();
-              if (dur) setDuration(dur);
-            } else if (state === YT.BUFFERING) {
-              setIsLoading(true);
-            } else if (state === YT.ENDED) {
-              if (isRepeat) {
-                ytPlayerRef.current?.seekTo(0);
-                ytPlayerRef.current?.playVideo();
-              } else {
-                playNext();
-              }
-            }
-          },
-          onError: (event: any) => {
-            console.warn('[YT] Error:', event.data);
-            setError('Video unavailable');
-            setTimeout(() => { setError(null); playNext(); }, 2000);
-          },
-        },
-      });
-    });
-
     return () => {
       if (ytIntervalRef.current) clearInterval(ytIntervalRef.current);
     };
