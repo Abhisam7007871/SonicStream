@@ -9,12 +9,35 @@ import {
 import { usePlayerStore } from '@/store/usePlayerStore';
 import QualitySelector from './QualitySelector';
 
-// ── YouTube IFrame API — DISABLED ──────────────────────────────────────
-// All YouTube tracks now use Piped direct audio URLs (no iframe needed)
-function loadYouTubeApi(): Promise<void> { return Promise.resolve(); }
+// ── YouTube IFrame API ─────────────────────────────────────────────────
+let ytApiLoaded = false;
+let ytApiPromise: Promise<void> | null = null;
 
-// Always returns null — YouTube tracks use Piped CDN URLs, not youtube.com
-function getYouTubeVideoId(_url: string): string | null {
+function loadYouTubeApi(): Promise<void> {
+  if (ytApiLoaded) return Promise.resolve();
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    if ((window as any).YT?.Player) { ytApiLoaded = true; resolve(); return; }
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(tag);
+    (window as any).onYouTubeIframeAPIReady = () => { ytApiLoaded = true; resolve(); };
+    // Fallback timeout
+    setTimeout(() => { resolve(); }, 8000);
+  });
+  return ytApiPromise;
+}
+
+function getYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  // youtube.com/watch?v=ID
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtube.com')) return u.searchParams.get('v');
+    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1);
+  } catch {}
+  // Just a bare video ID (11 chars)
+  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
   return null;
 }
 
@@ -40,8 +63,54 @@ export default function Player() {
   const ytVideoId = getYouTubeVideoId(trackUrl);
   const isYT = !!ytVideoId;
 
-  // ── YouTube Player DISABLED — all YT tracks use Piped direct audio ──
+  // ── Initialize YouTube IFrame Player (2x2px hidden iframe) ──────────
   useEffect(() => {
+    if (ytPlayerRef.current) return; // already initialized
+    loadYouTubeApi().then(() => {
+      if (!(window as any).YT?.Player || !ytContainerRef.current) return;
+      console.log('[YT] Creating 2x2px IFrame player');
+      ytPlayerRef.current = new (window as any).YT.Player('yt-player-container', {
+        height: '2',
+        width: '2',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0,
+          origin: window.location.origin,
+        },
+        events: {
+          onReady: () => {
+            console.log('[YT] Player ready');
+            setYtReady(true);
+          },
+          onStateChange: (event: any) => {
+            const YT = (window as any).YT;
+            if (event.data === YT.PlayerState.ENDED) {
+              if (isRepeat) {
+                ytPlayerRef.current?.seekTo(0, true);
+                ytPlayerRef.current?.playVideo();
+              } else {
+                playNext();
+              }
+            } else if (event.data === YT.PlayerState.PLAYING) {
+              setIsLoading(false);
+              setError(null);
+            } else if (event.data === YT.PlayerState.BUFFERING) {
+              setIsLoading(true);
+            }
+          },
+          onError: (event: any) => {
+            console.error('[YT] Player error:', event.data);
+            setError('YouTube playback error');
+            setTimeout(() => { setError(null); playNext(); }, 2000);
+          },
+        },
+      });
+    });
     return () => {
       if (ytIntervalRef.current) clearInterval(ytIntervalRef.current);
     };
@@ -237,13 +306,13 @@ export default function Player() {
         style={{ display: 'none' }}
       />
 
-      {/* YouTube Player - hidden (1x1px, opacity 0.01) */}
+      {/* YouTube Player - tiny 2x2px iframe, visually hidden */}
       <div style={{ 
         position: 'fixed', 
         bottom: 0, 
         right: 0, 
-        width: 1,
-        height: 1,
+        width: 2,
+        height: 2,
         overflow: 'hidden',
         opacity: 0.01,
         pointerEvents: 'none',

@@ -81,24 +81,21 @@ async function resolvePipedAudio(videoId: string): Promise<string | null> {
 }
 
 /**
- * Resolves a track to a playable direct-audio URL.
- * For YouTube: uses Piped API (frontend-side, no youtube.com needed)
+ * Resolves a track to a playable URL.
+ * For YouTube: returns the video ID so the 2x2px iframe player picks it up.
+ * For other sources: returns the direct audio URL.
  */
 function resolveStreamUrl(track: Track): string {
   const rawUrl = track.url || (track as any).streamUrl || '';
 
   if (track.source === 'youtube') {
-    // Return a placeholder — actual resolution happens async in setCurrentTrack
+    // Extract video ID — the Player.tsx iframe detects bare 11-char IDs
     const videoId = String(track.id).startsWith('http')
       ? new URLSearchParams(new URL(String(track.id)).search).get('v') || String(track.id)
       : String(track.id);
     
-    // Check cache first for instant playback
-    const cached = pipedCache.get(videoId);
-    if (cached && Date.now() - cached.ts < PIPED_CACHE_TTL) return cached.url;
-
-    // Fallback: use backend proxy (may work if Piped fails)
-    return `${API_BASE}/api/youtube/stream?id=${videoId}`;
+    // Return bare video ID — Player.tsx getYouTubeVideoId() matches it
+    return videoId;
   }
 
   // For Jamendo — direct CDN URL plays instantly
@@ -139,28 +136,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       audiomackUrl: track.source === 'audiomack' ? track.url : null,
     });
 
-    // For YouTube: async-resolve via Piped API in background
-    // If the sync URL was already a Piped cache hit, this is a no-op
-    if (track.source === 'youtube') {
-      const videoId = String(track.id).startsWith('http')
-        ? new URLSearchParams(new URL(String(track.id)).search).get('v') || String(track.id)
-        : String(track.id);
-      
-      // Only resolve if we don't already have a cached Piped URL
-      const cached = pipedCache.get(videoId);
-      if (!cached || Date.now() - cached.ts >= PIPED_CACHE_TTL) {
-        resolvePipedAudio(videoId).then((pipedUrl) => {
-          if (pipedUrl) {
-            // Only update if this track is still the current one
-            const current = get().currentTrack;
-            if (current && String(current.id) === String(track.id)) {
-              console.log(`[Piped] ✓ Updating URL for "${track.title}"`);
-              set({ currentTrack: { ...current, url: pipedUrl } });
-            }
-          }
-        }).catch(() => {});
-      }
-    }
+    // YouTube tracks use the 2x2px iframe player directly — no Piped resolution needed.
+    // The video ID is passed as the URL, and Player.tsx iframe handles playback.
 
     // Track song play for analytics (non-blocking)
     trackSongPlay({
