@@ -51,20 +51,22 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 /**
  * Resolves a track to a playable direct-audio URL.
  *
- * - youtube  → backend stream proxy  (avoids iframe embedding issues)
+ * - youtube  → backend stream proxy `/api/youtube/stream?id=VIDEO_ID`
+ *              (avoids iframe embedding issues on deployed sites)
  * - itunes   → Apple CDN .m4a preview URL  (direct, works immediately)
+ * - jamendo  → direct CDN URL (plays instantly)
  * - archive / others → use url / streamUrl as-is
  */
 function resolveStreamUrl(track: Track): string {
   const rawUrl = track.url || (track as any).streamUrl || '';
 
   if (track.source === 'youtube') {
-    // Pass YouTube URL directly — ReactPlayer handles it natively
+    // Use backend stream proxy — resolves to direct CDN audio URL
     const videoId = String(track.id).startsWith('http')
       ? new URLSearchParams(new URL(String(track.id)).search).get('v') || String(track.id)
       : String(track.id);
     
-    return `https://www.youtube.com/watch?v=${videoId}`;
+    return `${API_BASE}/api/youtube/stream?id=${videoId}`;
   }
 
   // For Jamendo — direct CDN URL plays instantly

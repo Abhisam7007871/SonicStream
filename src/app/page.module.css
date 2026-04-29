@@ -14,7 +14,7 @@
   padding: 80px;
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.4)), url('/hero.png');
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.4));
   background-size: cover;
   background-position: center;
   border: 1px solid var(--glass-border);
