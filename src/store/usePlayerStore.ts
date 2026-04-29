@@ -61,12 +61,13 @@ function resolveStreamUrl(track: Track): string {
   const rawUrl = track.url || (track as any).streamUrl || '';
 
   if (track.source === 'youtube') {
-    // Use backend stream proxy — resolves to direct CDN audio URL
+    // Use YouTube watch URL — Player component handles it via YouTube IFrame API
+    // This works because the video plays in the user's browser, not on the server
     const videoId = String(track.id).startsWith('http')
       ? new URLSearchParams(new URL(String(track.id)).search).get('v') || String(track.id)
       : String(track.id);
     
-    return `${API_BASE}/api/youtube/stream?id=${videoId}`;
+    return `https://www.youtube.com/watch?v=${videoId}`;
   }
 
   // For Jamendo — direct CDN URL plays instantly

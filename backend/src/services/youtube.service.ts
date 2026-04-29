@@ -95,12 +95,39 @@ export async function getInvidiousAudioUrl(videoId: string): Promise<string | nu
   const ytdlpUrl = await getAudioUrlViaYtDlp(videoId);
   if (ytdlpUrl) return save(ytdlpUrl);
 
-  // ── 2. Piped API instances ─────────────────────────────────────────────
+  // ── 2. Cobalt API (very reliable, doesn't touch YouTube directly) ─────
+  try {
+    console.log(`[Cobalt] Trying for ${videoId}`);
+    const cobaltRes = await fetch('https://api.cobalt.tools/api/json', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        isAudioOnly: true,
+        aFormat: 'mp3',
+        filenamePattern: 'basic',
+      }),
+      signal: AbortSignal.timeout(12000) as any,
+    });
+    if (cobaltRes.ok) {
+      const cobaltData = await cobaltRes.json() as any;
+      if (cobaltData.url) {
+        console.log('[Cobalt] ✓ Success');
+        return save(cobaltData.url);
+      }
+    }
+  } catch (e: any) {
+    console.log(`[Cobalt] Failed: ${e.message}`);
+  }
+
+  // ── 3. Piped API instances ─────────────────────────────────────────────
   const pipedInstances = [
     'https://pipedapi.kavin.rocks',
     'https://pipedapi.tokhmi.xyz',
     'https://pipedapi.moomoo.me',
     'https://api.piped.yt',
+    'https://pipedapi.in.projectsegfau.lt',
+    'https://pipedapi.adminforge.de',
   ];
 
   for (const piped of pipedInstances) {
