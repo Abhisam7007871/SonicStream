@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Heart, ListPlus, MoreHorizontal } from 'luci
 import TrackOptionsMenu from '@/components/TrackOptionsMenu';
 
 const TABS = ['Music', 'Podcasts'];
-const LIMIT = 50;
+const LIMIT = 30;
 
 export default function SearchPage() {
   const { query } = useSearchStore();
@@ -29,12 +29,12 @@ export default function SearchPage() {
   const [activeShow, setActiveShow] = useState<any>(null);
   const [episodes, setEpisodes] = useState<any[]>([]);
 
-  // Fast debounce (150ms)
+  // Debounce search — wait 400ms after user stops typing
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
       setPage(1);
-    }, 150);
+    }, 400);
     return () => clearTimeout(timer);
   }, [query]);
 
